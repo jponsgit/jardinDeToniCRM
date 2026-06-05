@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El jardín de Toni - CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config={theme:{extend:{colors:{forest:{50:'#f0f7f0',500:'#3a6b35',600:'#2d5016',800:'#152808',900:'#0d1a04'},terra:{50:'#fdf5ed',400:'#c67b3c'},cream:{DEFAULT:'#FAF7F2',dark:'#F0EBE2'}},fontFamily:{sans:['Plus Jakarta Sans','sans-serif']}}}}
+    </script>
+    <style>
+        *{box-sizing:border-box}body{background:#FAF7F2;font-family:'Plus Jakarta Sans',sans-serif;margin:0}
+        #sidebar{position:fixed;left:0;top:0;height:100vh;width:260px;z-index:40;transition:transform .3s;background:linear-gradient(180deg,#0d1a04,#152808);overflow-y:auto}
+        #sidebar.closed{transform:translateX(-100%)}@media(min-width:1024px){#sidebar{transform:translateX(0)!important}}
+        #overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35;display:none}#overlay.show{display:block}
+        .nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:10px;color:rgba(255,255,255,.6);font-weight:500;cursor:pointer;transition:all .2s;font-size:14px}
+        .nav-item:hover{color:#fff;background:rgba(255,255,255,.08)}.nav-item.active{color:#fff;background:#3a6b35}
+        .card{background:#fff;border-radius:14px;border:1px solid #E7E0D8;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+        .stat-card{background:#fff;border-radius:14px;border:1px solid #E7E0D8;padding:20px 22px}
+        .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}
+        .form-input{width:100%;padding:10px 14px;border:1.5px solid #E7E0D8;border-radius:10px;font-size:14px;font-family:inherit;background:#FAF7F2;transition:all .2s;color:#1C1917}
+        .form-input:focus{outline:none;border-color:#3a6b35;box-shadow:0 0 0 3px rgba(58,107,53,.15);background:#fff}
+        .search-input{padding-left:42px!important}
+        .form-label{display:block;font-size:13px;font-weight:600;color:#57534E;margin-bottom:6px}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:inherit}
+        .btn:active{transform:scale(.97)}.btn-primary{background:#3a6b35;color:#fff}.btn-primary:hover{background:#2d5016}
+        .btn-secondary{background:#F0EBE2;color:#57534E}.btn-secondary:hover{background:#E7E0D8}
+        .btn-danger{background:#B91C1C;color:#fff}.btn-danger:hover{background:#991B1B}
+        .btn-sm{padding:6px 14px;font-size:13px;border-radius:8px}
+        .avatar{display:flex;align-items:center;justify-content:center;border-radius:12px;font-weight:700;color:#fff;flex-shrink:0}
+        .trow{display:grid;gap:8px;padding:14px 16px;align-items:center;border-bottom:1px solid #F0EBE2;transition:background .15s}
+        .trow:hover{background:#FAF7F2}
+        .thead{display:grid;gap:8px;padding:10px 16px;font-size:12px;font-weight:700;color:#78716C;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E7E0D8}
+        .fade-in{animation:fi .3s ease}@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .pulse-dot{width:8px;height:8px;border-radius:50%;animation:p 2s infinite}@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}
+        .dash-bg{background:linear-gradient(135deg,#FAF7F2,#f0f7f0 50%,#FAF7F2);min-height:100vh}
+        .calcom-btn{background:linear-gradient(135deg,#b45309,#c67b3c);color:#fff}
+        .bdel{width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:#FEF2F2;color:#B91C1C;transition:all .15s;font-size:12px}.bdel:hover{background:#FEE2E2;transform:scale(1.08)}
+        .bact{width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:#f0f7f0;color:#3a6b35;transition:all .15s;font-size:12px}.bact:hover{background:#d9ecd9;transform:scale(1.08)}
+        @media(max-width:640px){.trow,.thead{font-size:13px}}
+    </style>
+</head>
+<body>
+<aside id="sidebar" class="closed">
+    <div class="p-5 pb-3"><div class="flex items-center gap-3"><img src="logo.png" alt="" class="w-10 h-10 rounded-[10px] object-contain bg-white/10 p-1" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="w-10 h-10 rounded-[10px] bg-forest-500 items-center justify-center" style="display:none"><i class="fa-solid fa-leaf text-white text-lg"></i></div><div><h1 class="text-white font-extrabold text-[15px] leading-tight">El jardín de Toni</h1><p class="text-white/40 text-[11px]">Menorca</p></div></div></div>
+    <div class="px-3 mb-2"><div class="h-px bg-white/10"></div></div>
+    <nav class="px-3 flex flex-col gap-1" id="nav">
+        <a class="nav-item" data-v="dashboard" onclick="nav('dashboard')"><i class="fa-solid fa-house w-5 text-center"></i> Inicio</a>
+        <a class="nav-item" data-v="clientes" onclick="nav('clientes')"><i class="fa-solid fa-users w-5 text-center"></i> Clientes</a>
+        <a class="nav-item" data-v="servicios" onclick="nav('servicios')"><i class="fa-solid fa-clipboard-list w-5 text-center"></i> Servicios</a>
+        <a class="nav-item" data-v="tipos" onclick="nav('tipos')"><i class="fa-solid fa-tags w-5 text-center"></i> Tipos de servicio</a>
+        <a class="nav-item" data-v="proximas" onclick="nav('proximas')"><i class="fa-solid fa-calendar-check w-5 text-center"></i> Próximas visitas</a>
+    </nav>
+    <div class="px-3 mt-4 mb-2"><div class="h-px bg-white/10"></div></div>
+    <div class="px-3 flex flex-col gap-1">
+        <a class="nav-item" onclick="nav('nuevo-cli')"><i class="fa-solid fa-user-plus w-5 text-center"></i> Nuevo cliente</a>
+        <a class="nav-item" onclick="nav('nuevo-svc')"><i class="fa-solid fa-circle-plus w-5 text-center"></i> Nuevo servicio</a>
+        <a class="nav-item" onclick="window.open('https://cal.com/joan-pons','_blank')" style="color:rgba(255,180,80,.75)"><i class="fa-solid fa-calendar-plus w-5 text-center"></i> Reservar cita</a>
+    </div>
+</aside>
+<div id="overlay" onclick="toggleSB()"></div>
+<main id="app" class="lg:ml-[260px] min-h-screen"></main>
+
+<!-- Modal -->
+<div id="modal-bg" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:none;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeModal()">
+    <div style="background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+        <h3 id="mt" class="text-lg font-bold text-gray-900 mb-2"></h3>
+        <p id="mm" class="text-gray-600 text-sm mb-6"></p>
+        <div class="flex gap-3 justify-end">
+            <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-danger btn-sm" onclick="doConfirm()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var ZONAS=['Ciutadella','Sa Caleta','Cala en Bosch','Cala Blanca','Cala en Blanes'];
+var TCLI=[{v:'particular',l:'Particular',c:'#3a6b35',b:'#f0f7f0'},{v:'comunidad',l:'Comunidad',c:'#b45309',b:'#fffbeb'},{v:'agencia',l:'Agencia',c:'#6b5b3a',b:'#faf6f0'}];
+var FREQ=[{v:'semanal',l:'Semanal'},{v:'quincenal',l:'Quincenal'},{v:'mensual',l:'Mensual'},{v:'bimestral',l:'Bimestral'},{v:'trimestral',l:'Trimestral'},{v:'puntual',l:'Puntual'}];
+var ICONS=['fa-tree','fa-water-ladder','fa-scissors','fa-faucet-drip','fa-broom','fa-spray-can','fa-tractor','fa-ellipsis'];
+var OPER=['Toni','Xavi','Marc','Pere','Miquel'];
+var EST=[{v:'programado',l:'Programado',c:'#b45309',b:'#fffbeb'},{v:'completado',l:'Completado',c:'#3a6b35',b:'#f0f7f0'},{v:'cancelado',l:'Cancelado',c:'#9ca3af',b:'#f3f4f6'}];
+
+var S={view:'dashboard',cli:[],svc:[],tipos:[],selId:null,editCliId:null,editSvcId:null,editTipoId:null,preCliId:null,fCli:{b:'',t:'',z:''},fSvc:{b:'',t:'',e:''},sbOpen:false};
+
+var _pendingAction = null;
+
+function openModal(title, msg, action) {
+    _pendingAction = action;
+    document.getElementById('mt').textContent = title;
+    document.getElementById('mm').innerHTML = msg;
+    document.getElementById('modal-bg').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('modal-bg').style.display = 'none';
+    _pendingAction = null;
+}
+
+function doConfirm() {
+    var action = _pendingAction;
+    document.getElementById('modal-bg').style.display = 'none';
+    _pendingAction = null;
+    if (action) {
+        setTimeout(action, 10);
+    }
+}
+
+function toast(msg, type) {
+    type = type || 'ok';
+    var bg = type === 'err' ? '#B91C1C' : '#3a6b35';
+    var ic = type === 'err' ? 'fa-exclamation-circle' : 'fa-check-circle';
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:20px;right:20px;z-index:200;padding:14px 20px;border-radius:12px;color:#fff;font-size:14px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;background:' + bg;
+    t.innerHTML = '<i class="fa-solid ' + ic + '"></i> ' + esc(msg);
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 3000);
+}
+
+function delCliente(id) {
+    var c = gCI(id); if (!c) return;
+    openModal('Eliminar cliente', '¿Eliminar a <strong>' + esc(c.nombre) + '</strong> y todos sus servicios?', function () {
+        S.svc = S.svc.filter(function (s) { return s.clienteId !== id; });
+        S.cli = S.cli.filter(function (x) { return x.id !== id; });
+        save(); toast('Cliente eliminado'); nav('clientes');
+    });
+}
+
+function delServicio(id) {
+    var s = S.svc.find(function (x) { return x.id === id; }); if (!s) return;
+    var c = gCI(s.clienteId); var t = gTS(s.tipoServicio);
+    openModal('Eliminar servicio', '¿Eliminar <strong>' + esc(t.nombre) + '</strong> del <strong>' + fDate(s.fecha) + '</strong>?', function () {
+        S.svc = S.svc.filter(function (x) { return x.id !== id; });
+        save(); toast('Servicio eliminado'); render();
+    });
+}
+
+function delTipo(id) {
+    var t = S.tipos.find(function (x) { return x.id === id; }); if (!t) return;
+    var u = S.svc.filter(function (s) { return s.tipoServicio === id; }).length;
+    var msg = '¿Eliminar <strong>' + esc(t.nombre) + '</strong>?';
+    if (u > 0) msg += '<br><br><span style="color:#b45309">Tiene ' + u + ' servicio' + (u > 1 ? 's' : '') + ' asociado' + (u > 1 ? 's' : '') + ' que también se eliminarán.</span>';
+    openModal('Eliminar tipo', msg, function () {
+        S.svc = S.svc.filter(function (s) { return s.tipoServicio !== id; });
+        S.tipos = S.tipos.filter(function (x) { return x.id !== id; });
+        save(); toast('Tipo eliminado'); render();
+    });
+}
+
+// ============================================================
+// PERSISTENCIA (LOCALSTORAGE) - V3 (Limpia y robusta)
+// ============================================================
+var KEY = 'toni_crm_v3';
+
+function save() { 
+    try {
+        localStorage.setItem(KEY, JSON.stringify({ cli: S.cli, svc: S.svc, tipos: S.tipos })); 
+    } catch(e) {
+        console.error("Error guardando en localStorage", e);
+    }
+}
+
+function load() {
+    try {
+        var r = localStorage.getItem(KEY);
+        if (r) {
+            var d = JSON.parse(r);
+            S.cli = Array.isArray(d.cli) ? d.cli : [];
+            S.svc = Array.isArray(d.svc) ? d.svc : [];
+            S.tipos = Array.isArray(d.tipos) ? d.tipos : [];
+            return true;
+        }
+    } catch(e) {
+        console.error("Error cargando localStorage", e);
+    }
+    return false;
+}
+
+function defTipos() { return [{ id: 't1', nombre: 'Mantenimiento de piscinas', icono: 'fa-water-ladder', duracion: '60min' }, { id: 't2', nombre: 'Instalación y reparación de sistema de riego', icono: 'fa-faucet-drip', duracion: '90min' }, { id: 't3', nombre: 'Poda de árboles y setos', icono: 'fa-scissors', duracion: '30min' }, { id: 't4', nombre: 'Mantenimiento de jardín', icono: 'fa-tree', duracion: '45min' }]; }
+
+function sample() {
+    var h = new Date(); function ha(d) { var f = new Date(h); f.setDate(f.getDate() - d); return f.toISOString().split('T')[0]; } function en(d) { var f = new Date(h); f.setDate(f.getDate() + d); return f.toISOString().split('T')[0]; }
+    S.tipos = defTipos();
+    S.cli = [
+        { id: 'c1', nombre: 'María García Soler', tipo: 'particular', zona: 'Cala Blanca', telefono: '671 234 567', email: 'maria@email.com', direccion: 'C/ Miramar 8', frecuencia: 'mensual', fechaAlta: '2024-01-10', notas: '' },
+        { id: 'c2', nombre: 'Comunidad Bahía Azul', tipo: 'comunidad', zona: 'Cala en Bosch', telefono: '971 362 045', email: 'admin@bahiazul.es', direccion: 'Urb. Bahía Azul', frecuencia: 'quincenal', fechaAlta: '2023-06-15', notas: '24 viviendas.' },
+        { id: 'c3', nombre: 'Hotel Son Vell', tipo: 'agencia', zona: 'Ciutadella', telefono: '971 358 900', email: 'info@sonvell.com', direccion: 'Ctra. Ciutadella km 3', frecuencia: 'semanal', fechaAlta: '2023-03-22', notas: '2 piscinas.' },
+        { id: 'c4', nombre: 'Joan Pons Mascaró', tipo: 'particular', zona: 'Cala en Blanes', telefono: '629 876 543', email: 'joan@email.com', direccion: 'C/ Ponderosa 12', frecuencia: 'mensual', fechaAlta: '2023-09-05', notas: '' },
+        { id: 'c5', nombre: 'Comunidad Los Pinos', tipo: 'comunidad', zona: 'Sa Caleta', telefono: '971 150 230', email: 'pres@lospinos.es', direccion: 'Urb. Los Pinos 8', frecuencia: 'quincenal', fechaAlta: '2023-11-18', notas: '16 viviendas.' },
+        { id: 'c6', nombre: 'Inmobiliaria Menorca Viva', tipo: 'agencia', zona: 'Ciutadella', telefono: '971 369 111', email: 'info@menorcaviva.es', direccion: 'C/ Isabel II 24', frecuencia: 'mensual', fechaAlta: '2024-02-01', notas: '' }
+    ];
+    S.svc = [
+        { id: 's1', fecha: ha(30), clienteId: 'c2', tipoServicio: 't1', operario: 'Xavi', duracion: '60min', observaciones: 'Mantenimiento piscina.', estado: 'completado' },
+        { id: 's2', fecha: ha(20), clienteId: 'c1', tipoServicio: 't4', operario: 'Toni', duracion: '45min', observaciones: 'Revisión general.', estado: 'completado' },
+        { id: 's3', fecha: ha(10), clienteId: 'c3', tipoServicio: 't4', operario: 'Marc', duracion: '45min', observaciones: 'Siega y riego.', estado: 'completado' },
+        { id: 's4', fecha: ha(5), clienteId: 'c5', tipoServicio: 't1', operario: 'Pere', duracion: '60min', observaciones: 'Filtros limpios.', estado: 'completado' },
+        { id: 's5', fecha: ha(2), clienteId: 'c4', tipoServicio: 't3', operario: 'Toni', duracion: '30min', observaciones: 'Poda setos.', estado: 'completado' },
+        { id: 's6', fecha: en(1), clienteId: 'c1', tipoServicio: 't3', operario: 'Toni', duracion: '30min', observaciones: 'Poda rosales.', estado: 'programado' },
+        { id: 's7', fecha: en(2), clienteId: 'c3', tipoServicio: 't1', operario: 'Xavi', duracion: '60min', observaciones: '', estado: 'programado' },
+        { id: 's8', fecha: en(3), clienteId: 'c2', tipoServicio: 't4', operario: 'Marc', duracion: '45min', observaciones: '', estado: 'programado' },
+        { id: 's9', fecha: en(5), clienteId: 'c5', tipoServicio: 't1', operario: 'Pere', duracion: '60min', observaciones: '', estado: 'programado' },
+        { id: 's10', fecha: en(7), clienteId: 'c6', tipoServicio: 't2', operario: 'Xavi', duracion: '90min', observaciones: 'Reparación riego.', estado: 'programado' }
+    ];
+    save();
+}
+
+// ============================================================
+// UTILIDADES
+// ============================================================
+function gid() { return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5); }
+function fDate(d) { if (!d) return '-'; return new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function fShort(d) { if (!d) return '-'; return new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }); }
+function fRel(d) { var h = new Date(); h.setHours(0, 0, 0, 0); var f = new Date(d + 'T00:00:00'); f.setHours(0, 0, 0, 0); var df = Math.round((f - h) / 864e5); if (df === 0) return 'Hoy'; if (df === 1) return 'Mañana'; if (df === -1) return 'Ayer'; if (df > 1 && df <= 7) return 'En ' + df + ' días'; if (df < -1 && df >= -7) return 'Hace ' + Math.abs(df) + ' días'; return fDate(d); }
+function gTC(t) { return TCLI.find(function (x) { return x.v === t; }) || TCLI[0]; }
+function gTS(t) { return S.tipos.find(function (x) { return x.id === t; }) || { id: t, nombre: 'Desconocido', icono: 'fa-circle', duracion: '-' }; }
+function gTE(e) { return EST.find(function (x) { return x.v === e; }) || EST[0]; }
+function gFQ(f) { return FREQ.find(function (x) { return x.v === f; }) || FREQ[2]; }
+function gCI(id) { return S.cli.find(function (c) { return c.id === id; }); }
+function gSI(id) { return S.svc.filter(function (s) { return s.clienteId === id; }).sort(function (a, b) { return b.fecha.localeCompare(a.fecha); }); }
+function gIni(n) { var w = n.trim().split(/\s+/); if (w.length >= 2) return (w[0][0] + w[w.length >= 3 ? 2 : 1][0]).toUpperCase(); return n.substring(0, 2).toUpperCase(); }
+function gCol(n) { var c = ['#3a6b35', '#b45309', '#6b5b3a', '#0e7490', '#9a4c4c', '#4c7a5a', '#7a6b3a', '#5a3a6b', '#2d6a4f', '#c67b3c']; var h = 0; for (var i = 0; i < n.length; i++) h = n.charCodeAt(i) + ((h << 5) - h); return c[Math.abs(h) % c.length]; }
+function esc(s) { if (!s) return ''; return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function greet() { var h = new Date().getHours(); if (h < 13) return 'Buenos días'; if (h < 21) return 'Buenas tardes'; return 'Buenas noches'; }
+
+// ============================================================
+// NAVEGACIÓN
+// ============================================================
+function nav(v, p) {
+    p = p || {}; S.view = v;
+    if (p.cliId) S.selId = p.cliId; if (p.editCli) S.editCliId = p.editCli; if (p.editSvc) S.editSvcId = p.editSvc; if (p.editTipo) S.editTipoId = p.editTipo; if (p.preCli) S.preCliId = p.preCli;
+    if (S.sbOpen) toggleSB(); updNav(); render(); window.scrollTo(0, 0);
+}
+function toggleSB() { S.sbOpen = !S.sbOpen; var s = document.getElementById('sidebar'), o = document.getElementById('overlay'); if (S.sbOpen) { s.classList.remove('closed'); o.classList.add('show'); } else { s.classList.add('closed'); o.classList.remove('show'); } }
+function updNav() { document.querySelectorAll('#nav .nav-item').forEach(function (i) { var v = i.dataset.v; var a = v === S.view || (v === 'clientes' && ['ficha', 'nuevo-cli', 'edit-cli'].indexOf(S.view) !== -1) || (v === 'servicios' && ['nuevo-svc', 'edit-svc'].indexOf(S.view) !== -1); i.classList.toggle('active', a); }); }
+
+function render() {
+    var m = document.getElementById('app'); var h = '';
+    h += '<header class="lg:hidden sticky top-0 z-20 bg-cream/90 backdrop-blur-md border-b border-[#E7E0D8] px-4 py-3 flex items-center gap-3"><button onclick="toggleSB()" class="w-9 h-9 rounded-lg bg-cream-dark flex items-center justify-center" style="border:1px solid #E7E0D8;color:#57534E"><i class="fa-solid fa-bars text-sm"></i></button><span class="font-bold text-forest-800 text-sm">El jardín de Toni</span></header>';
+    h += '<div class="fade-in">';
+    if (S.view === 'dashboard') h += rDash();
+    else if (S.view === 'clientes') h += rCli();
+    else if (S.view === 'ficha') h += rFicha();
+    else if (S.view === 'nuevo-cli') h += rFC(false);
+    else if (S.view === 'edit-cli') h += rFC(true);
+    else if (S.view === 'servicios') h += rSvc();
+    else if (S.view === 'nuevo-svc') h += rFS(false);
+    else if (S.view === 'edit-svc') h += rFS(true);
+    else if (S.view === 'tipos') h += rTipos();
+    else if (S.view === 'nuevo-tipo') h += rFT(false);
+    else if (S.view === 'edit-tipo') h += rFT(true);
+    else if (S.view === 'proximas') h += rProx();
+    else h += rDash();
+    h += '</div>'; m.innerHTML = h;
+}
+
+// DASHBOARD
+function rDash() {
+    var h = new Date(); h.setHours(0, 0, 0, 0); var im = new Date(h.getFullYear(), h.getMonth(), 1); var e7 = new Date(h); e7.setDate(e7.getDate() + 7);
+    var tc = S.cli.length, sm = S.svc.filter(function (s) { return s.estado === 'completado' && new Date(s.fecha + 'T00:00:00') >= im; }).length;
+    var pv = S.svc.filter(function (s) { return s.estado === 'programado' && new Date(s.fecha + 'T00:00:00') >= h && new Date(s.fecha + 'T00:00:00') <= e7; }).length;
+    var nc = S.cli.filter(function (c) { return new Date(c.fechaAlta + 'T00:00:00') >= im; }).length;
+    var px = S.svc.filter(function (s) { return s.estado === 'programado' && new Date(s.fecha + 'T00:00:00') >= h; }).sort(function (a, b) { return a.fecha.localeCompare(b.fecha); }).slice(0, 5);
+    var ul = S.svc.filter(function (s) { return s.estado === 'completado'; }).sort(function (a, b) { return b.fecha.localeCompare(a.fecha); }).slice(0, 5);
+    var o = '<div class="dash-bg p-5 lg:p-8"><div class="mb-6 lg:mb-8"><h1 class="text-2xl lg:text-3xl font-extrabold text-forest-900">' + greet() + '</h1><p class="text-sm text-gray-500 mt-1">Panel de control</p></div>';
+    o += '<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 lg:mb-8">';
+    o += sc('Clientes', tc, nc > 0 ? '+' + nc + ' este mes' : 'Sin novedades', '#3a6b35', 'fa-users', 'bg-forest-50 text-forest-500');
+    o += sc('Servicios mes', sm, 'Completados', '#c67b3c', 'fa-wrench', 'bg-terra-50 text-terra-400');
+    o += sc('Próx. 7 días', pv, 'Programadas', '#b45309', 'fa-calendar-check', 'bg-amber-50 text-amber-600', 1);
+    o += sc('Nuevos', nc, 'Este mes', '#6b5b3a', 'fa-user-plus', 'bg-stone-100 text-stone-500');
+    o += '</div><div class="grid lg:grid-cols-2 gap-4 lg:gap-6">';
+    o += pxCard('Próximas visitas', px); o += pxCard('Últimos completados', ul);
+    o += '</div><div class="mt-6 flex flex-wrap gap-3"><button onclick="nav(\'nuevo-cli\')" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Nuevo cliente</button><button onclick="nav(\'nuevo-svc\')" class="btn btn-secondary" style="border:1.5px solid #E7E0D8"><i class="fa-solid fa-circle-plus text-forest-500"></i> Nuevo servicio</button></div></div>';
+    return o;
+}
+function sc(t, v, sub, col, ico, cls, pulse) { return '<div class="stat-card" style="border-left:4px solid ' + col + '"><div class="flex items-center justify-between mb-2"><span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">' + t + '</span><div class="w-8 h-8 rounded-lg flex items-center justify-center ' + cls + '"><i class="fa-solid ' + ico + ' text-sm"></i></div></div><div class="text-3xl font-extrabold text-forest-900">' + v + '</div><div class="text-xs text-gray-400 mt-1">' + (pulse ? '<span class="flex items-center gap-1.5"><span class="pulse-dot bg-amber-500 inline-block"></span> ' : '') + sub + (pulse ? '</span>' : '') + '</div></div>'; }
+function pxCard(t, arr) { var o = '<div class="card"><div class="px-5 py-4 border-b border-[#F0EBE2]"><h2 class="font-bold text-forest-900">' + t + '</h2></div>'; if (!arr.length) o += '<div class="p-8 text-center text-gray-400"><p class="text-sm">No hay datos</p></div>'; else arr.forEach(function (s) { var c = gCI(s.clienteId); var t2 = gTS(s.tipoServicio); o += '<div class="flex items-center gap-3 px-5 py-3 border-b border-[#F0EBE2] last:border-b-0 hover:bg-cream/50 cursor-pointer" onclick="nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})"><div class="w-9 h-9 rounded-lg flex items-center justify-center ' + (s.estado === 'programado' ? 'bg-amber-50 text-amber-600' : 'bg-forest-50 text-forest-500') + ' flex-shrink-0"><i class="fa-solid ' + t2.icono + ' text-sm"></i></div><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-gray-900 truncate">' + (c ? esc(c.nombre) : '—') + '</div><div class="text-xs text-gray-500">' + esc(t2.nombre) + ' · ' + s.operario + '</div></div><div class="text-right flex-shrink-0"><div class="text-xs text-gray-600">' + (s.estado === 'programado' ? fRel(s.fecha) : fShort(s.fecha)) + '</div><div class="text-xs text-gray-400">' + (s.duracion || '-') + '</div></div></div>'; }); o += '</div>'; return o; }
+
+// CLIENTES
+function rCli() { var f = S.fCli; var cl = S.cli.slice(); if (f.b) { var q = f.b.toLowerCase(); cl = cl.filter(function (c) { return c.nombre.toLowerCase().indexOf(q) !== -1 || c.telefono.toLowerCase().indexOf(q) !== -1 || c.zona.toLowerCase().indexOf(q) !== -1; }); } if (f.t) cl = cl.filter(function (c) { return c.tipo === f.t; }); if (f.z) cl = cl.filter(function (c) { return c.zona === f.z; }); cl.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Clientes</h1><p class="text-sm text-gray-500">' + S.cli.length + ' registrados</p></div><button onclick="nav(\'nuevo-cli\')" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Nuevo cliente</button></div>';
+    o += '<div class="card p-4 mb-4"><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1 relative"><i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i><input type="text" class="form-input search-input" placeholder="Buscar..." value="' + esc(f.b) + '" oninput="S.fCli.b=this.value;render()"></div><div class="flex gap-3"><select class="form-input w-auto min-w-[120px]" onchange="S.fCli.t=this.value;render()"><option value="">Tipo</option>'; TCLI.forEach(function (t) { o += '<option value="' + t.v + '"' + (f.t === t.v ? ' selected' : '') + '>' + t.l + '</option>'; }); o += '</select><select class="form-input w-auto min-w-[120px]" onchange="S.fCli.z=this.value;render()"><option value="">Zona</option>'; ZONAS.forEach(function (z) { o += '<option value="' + z + '"' + (f.z === z ? ' selected' : '') + '>' + z + '</option>'; }); o += '</select></div></div></div>';
+    if (!cl.length) o += '<div class="card p-12 text-center text-gray-400">No hay clientes</div>';
+    else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr .5fr"><span>Nombre</span><span>Tipo</span><span>Zona</span><span>Teléfono</span><span>Frecuencia</span><span></span></div>'; cl.forEach(function (c) { var tp = gTC(c.tipo); o += '<div class="trow" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr .5fr" onclick="nav(\'ficha\',{cliId:\'' + c.id + '\'})"><div class="flex items-center gap-3"><div class="avatar w-9 h-9 text-xs" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><span class="font-semibold text-gray-900 text-sm truncate">' + esc(c.nombre) + '</span></div><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span><span class="text-sm text-gray-600">' + c.zona + '</span><span class="text-sm text-gray-600">' + c.telefono + '</span><span class="text-sm text-gray-500">' + gFQ(c.frecuencia).l + '</span><button onclick="event.stopPropagation();delCliente(\'' + c.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; cl.forEach(function (c) { var tp = gTC(c.tipo); o += '<div class="card p-4 cursor-pointer" onclick="nav(\'ficha\',{cliId:\'' + c.id + '\'})"><div class="flex items-start gap-3"><div class="avatar w-11 h-11 text-sm" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><div class="flex-1 min-w-0"><div class="font-bold text-gray-900 text-sm">' + esc(c.nombre) + '</div><div class="flex gap-1.5 mt-1"><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span><span class="badge bg-gray-100 text-gray-600">' + c.zona + '</span></div></div><button onclick="event.stopPropagation();delCliente(\'' + c.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
+
+// FICHA CLIENTE
+function rFicha() { var c = gCI(S.selId); if (!c) return '<div class="p-8 text-center text-gray-500">No encontrado</div>'; var tp = gTC(c.tipo); var fq = gFQ(c.frecuencia); var sv = gSI(c.id); var pr = sv.filter(function (s) { return s.estado === 'programado'; });
+    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'clientes\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button>';
+    o += '<div class="card p-5 lg:p-6 mb-4"><div class="flex flex-col sm:flex-row gap-4"><div class="avatar w-16 h-16 text-xl" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><div class="flex-1 min-w-0"><div class="flex flex-wrap items-center gap-2 mb-1"><h1 class="text-xl lg:text-2xl font-extrabold text-forest-900">' + esc(c.nombre) + '</h1><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span></div><div class="text-sm text-gray-500">' + c.zona + ' · ' + fq.l + ' · Desde ' + fDate(c.fechaAlta) + '</div>' + (c.notas ? '<div class="text-sm text-gray-400 mt-2 italic">' + esc(c.notas) + '</div>' : '') + '</div><div class="flex gap-2 flex-wrap"><button onclick="nav(\'edit-cli\',{editCli:\'' + c.id + '\'})" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen text-xs"></i> Editar</button><button onclick="delCliente(\'' + c.id + '\')" class="btn btn-sm" style="background:#FEE2E2;color:#B91C1C"><i class="fa-solid fa-trash text-xs"></i></button></div></div></div>';
+    o += '<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6"><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Teléfono</div><a href="tel:' + c.telefono + '" class="text-sm font-semibold text-forest-700">' + c.telefono + '</a></div><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Email</div><div class="text-sm text-gray-700 truncate">' + (c.email || '-') + '</div></div><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Dirección</div><div class="text-sm text-gray-700">' + (c.direccion || '-') + '</div></div><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Próxima visita</div><div class="text-sm font-semibold ' + (pr.length ? 'text-amber-600' : 'text-gray-400') + '">' + (pr.length ? fRel(pr[0].fecha) : 'Sin programar') + '</div></div></div>';
+    o += '<div class="flex items-center justify-between mb-3"><h2 class="font-bold text-forest-900 text-lg">Historial</h2><button onclick="nav(\'nuevo-svc\',{preCli:\'' + c.id + '\'})" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus text-xs"></i> Añadir</button></div>';
+    if (!sv.length) o += '<div class="card p-8 text-center text-gray-400">Sin servicios</div>';
+    else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:1fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span>Fecha</span><span>Servicio</span><span>Operario</span><span>Duración</span><span>Estado</span><span>Obs.</span><span></span></div>'; sv.forEach(function (s) { var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="trow" style="grid-template-columns:1fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span class="text-sm font-medium text-gray-900">' + fDate(s.fecha) + '</span><div class="flex items-center gap-2"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm text-gray-700">' + esc(t.nombre) + '</span></div><span class="text-sm text-gray-600">' + s.operario + '</span><span class="text-sm text-gray-500">' + (s.duracion || '-') + '</span><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><span class="text-sm text-gray-500 truncate">' + (esc(s.observaciones) || '-') + '</span><button onclick="event.stopPropagation();delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; sv.forEach(function (s) { var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm font-semibold">' + esc(t.nombre) + '</span></div><div class="flex items-center gap-2"><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><button onclick="delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div></div><div class="flex gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-calendar mr-1"></i>' + fDate(s.fecha) + '</span><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
+
+// FORM CLIENTE
+function rFC(edit) { var c = { nombre: '', tipo: 'particular', zona: '', telefono: '', email: '', direccion: '', frecuencia: 'mensual', fechaAlta: new Date().toISOString().split('T')[0], notas: '' }; if (edit && S.editCliId) c = gCI(S.editCliId) || c; var bk = edit ? 'ficha' : 'clientes';
+    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'' + bk + '\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar cliente' : 'Nuevo cliente') + '</h1><form onsubmit="saveCli(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
+    o += fi('Nombre *', 'text', 'nombre', c.nombre, 'Nombre completo', 1); o += fi('Teléfono *', 'tel', 'telefono', c.telefono, '671 000 000', 1); o += fi('Email', 'email', 'email', c.email, 'correo@ejemplo.com', 0);
+    o += '<div><label class="form-label">Tipo *</label><select name="tipo" class="form-input">'; TCLI.forEach(function (t) { o += '<option value="' + t.v + '"' + (c.tipo === t.v ? ' selected' : '') + '>' + t.l + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Zona *</label><select name="zona" class="form-input"><option value="">Zona</option>'; ZONAS.forEach(function (z) { o += '<option value="' + z + '"' + (c.zona === z ? ' selected' : '') + '>' + z + '</option>'; }); o += '</select></div>';
+    o += '<div class="sm:col-span-2">' + fi2('Dirección', 'direccion', c.direccion, 'C/ Ejemplo 123') + '</div>';
+    o += '<div><label class="form-label">Frecuencia</label><select name="frecuencia" class="form-input">'; FREQ.forEach(function (fr) { o += '<option value="' + fr.v + '"' + (c.frecuencia === fr.v ? ' selected' : '') + '>' + fr.l + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Fecha de alta</label><input type="date" name="fechaAlta" class="form-input" value="' + (c.fechaAlta || '') + '"></div>';
+    o += '<div class="sm:col-span-2"><label class="form-label">Notas</label><textarea name="notas" class="form-input" rows="3">' + esc(c.notas) + '</textarea></div>';
+    o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Crear') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'' + bk + '\')">Cancelar</button></div></form></div>'; return o; }
+function fi(l, t, n, v, ph, rq) { return '<div><label class="form-label">' + l + '</label><input type="' + t + '" name="' + n + '" class="form-input" value="' + esc(v) + '" ' + (rq ? 'required' : '') + ' placeholder="' + ph + '"></div>'; }
+function fi2(label, name, value, ph) { return '<label class="form-label">' + label + '</label><input type="text" name="' + name + '" class="form-input" value="' + esc(value) + '" placeholder="' + ph + '">'; }
+
+function saveCli(ev, edit) {
+    ev.preventDefault();
+    var f = ev.target;
+    var d = {
+        nombre: f.nombre.value.trim(),
+        tipo: f.tipo.value,
+        zona: f.zona.value,
+        telefono: f.telefono.value.trim(),
+        email: f.email.value.trim(),
+        direccion: f.direccion.value.trim(),
+        frecuencia: f.frecuencia.value,
+        fechaAlta: f.fechaAlta.value || new Date().toISOString().split('T')[0],
+        notas: f.notas.value.trim()
+    };
+    if (!d.nombre || !d.zona || !d.telefono) {
+        toast('Rellena los campos obligatorios', 'err');
+        return;
+    }
+    if (edit && S.editCliId) {
+        var i = S.cli.findIndex(function (c) { return c.id === S.editCliId; });
+        if (i !== -1) S.cli[i] = Object.assign({}, S.cli[i], d);
+        save();
+        toast('Cliente actualizado');
+        S.selId = S.editCliId;
+        S.editCliId = null;
+        nav('ficha');
+    } else {
+        S.cli.push(Object.assign({ id: gid() }, d));
+        save();
+        toast('Cliente creado');
+        S.editCliId = null;
+        S.preCliId = null;
+        nav('clientes');
+    }
+}
+
+// SERVICIOS
+function rSvc() { var f = S.fSvc; var sv = S.svc.slice(); if (f.b) { var q = f.b.toLowerCase(); sv = sv.filter(function (s) { var c = gCI(s.clienteId); return (c && c.nombre.toLowerCase().indexOf(q) !== -1) || s.observaciones.toLowerCase().indexOf(q) !== -1 || s.operario.toLowerCase().indexOf(q) !== -1; }); } if (f.t) sv = sv.filter(function (s) { return s.tipoServicio === f.t; }); if (f.e) sv = sv.filter(function (s) { return s.estado === f.e; }); sv.sort(function (a, b) { return b.fecha.localeCompare(a.fecha); });
+    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Servicios</h1><p class="text-sm text-gray-500">' + S.svc.length + ' registrados</p></div><button onclick="nav(\'nuevo-svc\')" class="btn btn-primary"><i class="fa-solid fa-circle-plus"></i> Nuevo servicio</button></div>';
+    o += '<div class="card p-4 mb-4"><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1 relative"><i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i><input type="text" class="form-input search-input" placeholder="Buscar..." value="' + esc(f.b) + '" oninput="S.fSvc.b=this.value;render()"></div><div class="flex gap-3"><select class="form-input w-auto min-w-[160px]" onchange="S.fSvc.t=this.value;render()"><option value="">Servicio</option>'; S.tipos.forEach(function (t) { o += '<option value="' + t.id + '"' + (f.t === t.id ? ' selected' : '') + '>' + esc(t.nombre) + '</option>'; }); o += '</select><select class="form-input w-auto min-w-[120px]" onchange="S.fSvc.e=this.value;render()"><option value="">Estado</option>'; EST.forEach(function (e) { o += '<option value="' + e.v + '"' + (f.e === e.v ? ' selected' : '') + '>' + e.l + '</option>'; }); o += '</select></div></div></div>';
+    if (!sv.length) o += '<div class="card p-12 text-center text-gray-400">Sin servicios</div>';
+    else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:1fr 1.5fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span>Fecha</span><span>Cliente</span><span>Servicio</span><span>Operario</span><span>Duración</span><span>Estado</span><span>Obs.</span><span></span></div>'; sv.forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="trow" style="grid-template-columns:1fr 1.5fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span class="text-sm font-medium text-gray-900">' + fDate(s.fecha) + '</span><span class="text-sm font-semibold text-forest-700 cursor-pointer hover:underline truncate" onclick="event.stopPropagation();nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})">' + (c ? esc(c.nombre) : '—') + '</span><div class="flex items-center gap-2"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm text-gray-700 truncate">' + esc(t.nombre) + '</span></div><span class="text-sm text-gray-600">' + s.operario + '</span><span class="text-sm text-gray-500">' + (s.duracion || '-') + '</span><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><span class="text-sm text-gray-500 truncate">' + (esc(s.observaciones) || '-') + '</span><button onclick="event.stopPropagation();delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; sv.forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="card p-4"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold text-forest-700">' + (c ? esc(c.nombre) : '—') + '</span><div class="flex items-center gap-2"><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><button onclick="delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div></div><div class="flex items-center gap-2 mb-1"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm">' + esc(t.nombre) + '</span></div><div class="flex gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-calendar mr-1"></i>' + fDate(s.fecha) + '</span><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span><span><i class="fa-solid fa-clock mr-1"></i>' + (s.duracion || '-') + '</span></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
+
+// FORM SERVICIO
+function rFS(edit) { var s = { fecha: new Date().toISOString().split('T')[0], clienteId: '', tipoServicio: S.tipos.length ? S.tipos[0].id : '', operario: OPER[0], duracion: '45min', observaciones: '', estado: 'programado' }; if (edit && S.editSvcId) s = S.svc.find(function (x) { return x.id === S.editSvcId; }) || s; if (S.preCliId && !edit) s.clienteId = S.preCliId; var cl = S.cli.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); }); var bk = edit ? 'servicios' : (S.preCliId ? 'ficha' : 'servicios');
+    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'' + bk + '\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar servicio' : 'Nuevo servicio') + '</h1><form onsubmit="saveSvc(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
+    o += '<div><label class="form-label">Cliente *</label><select name="clienteId" class="form-input" required><option value="">Cliente</option>'; cl.forEach(function (c) { o += '<option value="' + c.id + '"' + (s.clienteId === c.id ? ' selected' : '') + '>' + esc(c.nombre) + ' (' + c.zona + ')</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Fecha *</label><input type="date" name="fecha" class="form-input" value="' + (s.fecha || '') + '" required></div>';
+    o += '<div><label class="form-label">Tipo de servicio *</label><select name="tipoServicio" class="form-input" required onchange="autoDur(this.value)">'; S.tipos.forEach(function (t) { o += '<option value="' + t.id + '"' + (s.tipoServicio === t.id ? ' selected' : '') + '>' + esc(t.nombre) + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Operario *</label><select name="operario" class="form-input" required>'; OPER.forEach(function (op) { o += '<option value="' + op + '"' + (s.operario === op ? ' selected' : '') + '>' + op + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Duración</label><select name="duracion" class="form-input" id="dur-sel">'; ['30min', '45min', '60min', '90min', '120min', '150min', '180min', '240min'].forEach(function (d) { o += '<option value="' + d + '"' + (s.duracion === d ? ' selected' : '') + '>' + d + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Estado</label><select name="estado" class="form-input">'; EST.forEach(function (e) { o += '<option value="' + e.v + '"' + (s.estado === e.v ? ' selected' : '') + '>' + e.l + '</option>'; }); o += '</select></div>';
+    o += '<div class="sm:col-span-2"><label class="form-label">Observaciones</label><textarea name="observaciones" class="form-input" rows="3">' + esc(s.observaciones) + '</textarea></div>';
+    o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Registrar') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'' + bk + '\')">Cancelar</button>'; if (edit) o += '<button type="button" class="btn btn-danger btn-sm ml-auto" onclick="delServicio(\'' + s.id + '\')"><i class="fa-solid fa-trash text-xs"></i> Eliminar</button>'; o += '</div></form></div>'; return o; }
+function autoDur(tid) { var t = S.tipos.find(function (x) { return x.id === tid; }); if (t) { var s = document.getElementById('dur-sel'); if (s) s.value = t.duracion; } }
+function saveSvc(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { fecha: f.fecha.value, clienteId: f.clienteId.value, tipoServicio: f.tipoServicio.value, operario: f.operario.value, duracion: f.duracion.value, observaciones: f.observaciones.value.trim(), estado: f.estado.value }; if (!d.clienteId || !d.fecha) { toast('Faltan datos', 'err'); return; } if (edit && S.editSvcId) { var i = S.svc.findIndex(function (s) { return s.id === S.editSvcId; }); if (i !== -1) S.svc[i] = Object.assign({}, S.svc[i], d); save(); toast('Servicio actualizado'); S.editSvcId = null; nav('servicios'); } else { S.svc.push(Object.assign({ id: gid() }, d)); save(); toast('Servicio registrado'); S.preCliId = null; nav('servicios'); } }
+
+// TIPOS DE SERVICIO
+function rTipos() {
+    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Tipos de servicio</h1><p class="text-sm text-gray-500">' + S.tipos.length + ' tipos definidos</p></div><button onclick="nav(\'nuevo-tipo\')" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Nuevo tipo</button></div>';
+    if (!S.tipos.length) o += '<div class="card p-12 text-center text-gray-400">No hay tipos</div>';
+    else { o += '<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">'; S.tipos.forEach(function (t) { var u = S.svc.filter(function (s) { return s.tipoServicio === t.id; }).length; o += '<div class="card p-5"><div class="flex items-start gap-4"><div class="w-12 h-12 rounded-xl flex items-center justify-center bg-forest-50 text-forest-600 flex-shrink-0"><i class="fa-solid ' + t.icono + ' text-lg"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-gray-900 text-sm mb-1">' + esc(t.nombre) + '</div><div class="flex items-center gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-clock mr-1"></i>' + esc(t.duracion) + '</span><span><i class="fa-solid fa-clipboard-list mr-1"></i>' + u + ' servicio' + (u !== 1 ? 's' : '') + '</span></div></div><div class="flex gap-1.5 flex-shrink-0"><button onclick="nav(\'edit-tipo\',{editTipo:\'' + t.id + '\'})" class="bact" title="Editar"><i class="fa-solid fa-pen"></i></button><button onclick="delTipo(\'' + t.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
+
+function rFT(edit) { var t = { nombre: '', icono: 'fa-tree', duracion: '60min' }; if (edit && S.editTipoId) t = S.tipos.find(function (x) { return x.id === S.editTipoId; }) || t;
+    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'tipos\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar tipo' : 'Nuevo tipo') + '</h1><form onsubmit="saveTipo(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
+    o += fi('Nombre del servicio *', 'text', 'nombre', t.nombre, 'Ej: Mantenimiento de piscina', 1);
+    o += '<div><label class="form-label">Duración por defecto</label><select name="duracion" class="form-input">'; ['30min', '45min', '60min', '90min', '120min', '150min', '180min', '240min'].forEach(function (d) { o += '<option value="' + d + '"' + (t.duracion === d ? ' selected' : '') + '>' + d + '</option>'; }); o += '</select></div>';
+    o += '<div class="sm:col-span-2"><label class="form-label">Icono</label><div class="flex flex-wrap gap-2">';
+    ICONS.forEach(function (ic) { var sel = t.icono === ic; o += '<button type="button" onclick="document.querySelectorAll(\'.ico-btn\').forEach(function(b){b.classList.remove(\'ring-2\',\'ring-forest-500\')});this.classList.add(\'ring-2\',\'ring-forest-500\');document.getElementById(\'sel-icon\').value=\'' + ic + '\'" class="ico-btn w-10 h-10 rounded-lg border flex items-center justify-center cursor-pointer hover:bg-forest-50 transition ' + (sel ? 'ring-2 ring-forest-500 bg-forest-50' : 'bg-white border-[#E7E0D8]') + '"><i class="fa-solid ' + ic + ' text-forest-600"></i></button>'; });
+    o += '<input type="hidden" name="icono" id="sel-icon" value="' + t.icono + '"></div></div>';
+    o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Crear') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'tipos\')">Cancelar</button></div></form></div>'; return o; }
+function saveTipo(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { nombre: f.nombre.value.trim(), icono: f.icono.value, duracion: f.duracion.value }; if (!d.nombre) { toast('Pon un nombre', 'err'); return; } if (edit && S.editTipoId) { var i = S.tipos.findIndex(function (t) { return t.id === S.editTipoId; }); if (i !== -1) S.tipos[i] = Object.assign({}, S.tipos[i], d); save(); toast('Tipo actualizado'); S.editTipoId = null; nav('tipos'); } else { S.tipos.push(Object.assign({ id: gid() }, d)); save(); toast('Tipo creado'); nav('tipos'); } }
+
+// PRÓXIMAS VISITAS
+function rProx() { var h = new Date(); h.setHours(0, 0, 0, 0); var hs = h.toISOString().split('T')[0]; var px = S.svc.filter(function (s) { return s.estado === 'programado' && s.fecha >= hs; }).sort(function (a, b) { return a.fecha.localeCompare(b.fecha); });
+    var g = {}; var ord = ['Hoy', 'Mañana', 'Esta semana', 'Próxima semana', 'Más adelante']; var gI = { 'Hoy': 'fa-calendar-day', 'Mañana': 'fa-forward', 'Esta semana': 'fa-calendar-week', 'Próxima semana': 'fa-calendar', 'Más adelante': 'fa-ellipsis' }; var gC = { 'Hoy': '#b45309', 'Mañana': '#c67b3c', 'Esta semana': '#3a6b35', 'Próxima semana': '#6b5b3a', 'Más adelante': '#9ca3af' };
+    px.forEach(function (s) { var f = new Date(s.fecha + 'T00:00:00'); var df = Math.round((f - h) / 864e5); var k; if (df === 0) k = 'Hoy'; else if (df === 1) k = 'Mañana'; else if (df <= 7) k = 'Esta semana'; else if (df <= 14) k = 'Próxima semana'; else k = 'Más adelante'; if (!g[k]) g[k] = []; g[k].push(s); });
+    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Próximas visitas</h1><p class="text-sm text-gray-500">' + px.length + ' programadas</p></div><div class="flex gap-3"><button onclick="window.open(\'https://cal.com/joan-pons\',\'_blank\')" class="btn calcom-btn btn-sm"><i class="fa-solid fa-calendar-plus"></i> Cal.com</button><button onclick="nav(\'nuevo-svc\')" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-plus"></i> Registrar</button></div></div>';
+    if (!px.length) o += '<div class="card p-12 text-center text-gray-400">Sin visitas programadas</div>';
+    else ord.forEach(function (k) { if (!g[k]) return; o += '<div class="mb-6"><div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:' + gC[k] + '20"><i class="fa-solid ' + gI[k] + ' text-xs" style="color:' + gC[k] + '"></i></div><h2 class="font-bold text-forest-900">' + k + '</h2><span class="text-xs text-gray-400">(' + g[k].length + ')</span></div><div class="flex flex-col gap-2">'; g[k].forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); o += '<div class="card p-4"><div class="flex items-start gap-3"><div class="avatar w-10 h-10 text-xs mt-0.5" style="background:' + (c ? gCol(c.nombre) : '#9ca3af') + '">' + (c ? gIni(c.nombre) : '?') + '</div><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1"><span class="font-bold text-sm text-gray-900 cursor-pointer hover:text-forest-600" onclick="nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})">' + (c ? esc(c.nombre) : '—') + '</span><span class="text-xs text-gray-400">' + fShort(s.fecha) + '</span></div><div class="flex items-center gap-2 text-sm text-gray-600"><i class="fa-solid ' + t.icono + ' text-xs text-gray-400"></i>' + esc(t.nombre) + '</div><div class="flex gap-3 text-xs text-gray-500 mt-1"><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span><span><i class="fa-solid fa-clock mr-1"></i>' + (s.duracion || '-') + '</span></div></div><div class="flex gap-1.5 flex-shrink-0"><button onclick="compSvc(\'' + s.id + '\')" class="bact" title="Completar"><i class="fa-solid fa-check"></i></button><button onclick="delServicio(\'' + s.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div></div>'; }); o += '</div></div>'; })
+    o += '</div>'; return o; }
+function compSvc(id) { var i = S.svc.findIndex(function (s) { return s.id === id; }); if (i !== -1) { S.svc[i].estado = 'completado'; save(); toast('Completado'); render(); } }
+
+// INIT
+function init() { 
+    var loaded = load();
+    if (!loaded) {
+        sample();
+    }
+    if (!S.tipos || !S.tipos.length) S.tipos = defTipos();
+    S.view = 'dashboard'; 
+    updNav(); 
+    render(); 
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); if (S.sbOpen) toggleSB(); } }); 
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+</script>
+</body>
+</html>
