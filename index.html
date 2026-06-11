@@ -96,11 +96,14 @@ function sincronizarReservasCalCom() {
     .then(nuevasReservas => {
         var cambios = false;
 
+        if (!Array.isArray(nuevasReservas)) return;
+
         nuevasReservas.forEach(booking => {
             var idReservaCalCom = booking.uid; 
-            if (!idReservaCalCom) return;
+            // Si el ID no existe o viene como texto 'undefined', saltamos para no romper el CRM
+            if (!idReservaCalCom || idReservaCalCom === "undefined") return;
 
-            // Verificar si este servicio ya fue importado
+            // Verificar si este servicio ya fue importado previamente
             var yaExisteSvc = S.svc.some(function(s) { return s.id === idReservaCalCom; });
             if (yaExisteSvc) return;
 
@@ -111,15 +114,11 @@ function sincronizarReservasCalCom() {
 
             if (!cliente) {
                 var nuevoClienteId = 'c_cal_' + Date.now() + Math.random().toString(36).substr(2, 3);
-                
-                // Forzar que use una zona válida del CRM para evitar errores de bloqueo
-                var zonaAsignada = ZONAS && ZONAS.length ? ZONAS[0] : 'Ciutadella'; 
-
                 cliente = {
                     id: nuevoClienteId,
                     nombre: booking.nombre || 'Cliente Cal.com', 
                     tipo: 'particular',
-                    zona: zonaAsignada, 
+                    zona: S.zonas && S.zonas.length ? S.zonas[0] : 'Ciutadella', 
                     direccion: 'Dirección por confirmar',
                     telefono: booking.telefono || '',
                     email: emailBuscado,
@@ -129,7 +128,7 @@ function sincronizarReservasCalCom() {
                 cambios = true;
             }
 
-            // Formatear fecha y hora de forma ultra segura
+            // Procesar la fecha de forma blindada para el CRM
             var fechaLimpia = '';
             var horaLimpia = '10:00'; 
             if (booking.fecha_hora) {
@@ -140,7 +139,9 @@ function sincronizarReservasCalCom() {
                     horaLimpia = d.toTimeString().substring(0, 5);
                 }
             }
-            if (!fechaLimpia) {
+            
+            // Si la fecha falla por cualquier motivo, usamos el día actual por seguridad
+            if (!fechaLinter || !fechaLimpia) {
                 fechaLimpia = new Date().toISOString().substring(0, 10);
             }
 
@@ -168,7 +169,6 @@ function sincronizarReservasCalCom() {
     })
     .catch(error => console.error('Error al sincronizar con Make:', error));
 }
-
 
 function openModal(title, msg, action) {
     _pendingAction = action;
@@ -480,14 +480,14 @@ function init() {
         sample();
     }
     if (!S.tipos || !S.tipos.length) S.tipos = defTipos();
-    S.view = 'dashboard';
-    updNav();
+    S.view = 'dashboard'; 
+    updNav(); 
     
-    //  ESTA ES LA LÍNEA MÁGICA QUE FALTA PARA CONECTARLO TODO:
-    sincronizarReservasCalCom();
-
-    render();
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); if (S.sbOpen) toggleSB(); } });
+    // 👇 AGREGA ESTA LÍNEA AQUÍ DENTRO DE TU INIT ORIGINAL:
+    sincronizarReservasCalCom(); 
+    
+    render(); 
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); if (S.sbOpen) toggleSB(); } }); 
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
