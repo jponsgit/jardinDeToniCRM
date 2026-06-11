@@ -529,81 +529,82 @@ function rReservar() {
     return o;
 }
 
-// Función que captura cuando Cal.com confirma una reserva
-function handleCalBooking(event) {
+// ============================================================
+// MANEJO DE RESERVAS DESDE CAL.COM
+// ============================================================
+function handleCalBooking(e) {
     try {
-        console.log("Evento de Cal.com detectado:", event.detail);
-        
-        var detail = event.detail;
-        if (!detail) return;
-
-        // Cal.com envía la información en detail.payload o detail.data
-        var booking = detail.payload || detail.data;
+        console.log("Reserva exitosa detectada:", e.detail);
+        var booking = e.detail.data.booking || e.detail.data;
         if (!booking) return;
 
-        // Extraer fecha (startTime viene en formato ISO)
-        var startTime = booking.startTime || booking.start;
-        var dateStr = new Date(startTime).toISOString().split('T')[0];
-
-        // Extraer respuestas del formulario de Cal.com
-        var responses = booking.responses || {};
-        var name = responses.name || (booking.title ? booking.title.split(' and ')[0] : 'Cliente Cal.com');
-        var email = responses.email || '';
-        var phone = responses.phone || '';
-
-        // Buscar cliente existente por email para no duplicar
-        var client = null;
-        if (email) {
-            client = S.cli.find(function (c) { return c.email && c.email.toLowerCase() === email.toLowerCase(); });
-        }
+        // CORRECCIÓN CRUCIAL: Usamos generateId() en lugar de gid() para que no explote
+        var uid = booking.uid || generateId();
         
-        var clientId;
+        var asistente = (booking.attendees && booking.attendees.length > 0) ? booking.attendees[0] : null;
+        
+        var nombreCliente = asistente ? asistente.name : 'Cliente Cal.com';
+        var emailCliente = asistente ? asistente.email : '';
+        var telefonoCliente = asistente ? (asistente.phoneNumber || '') : '';
+        var notasCliente = booking.description || '';
 
-        if (client) {
-            clientId = client.id;
+        var dateStr = new Date().toISOString().substring(0, 10);
+        if (booking.startTime) {
+            dateStr = booking.startTime.substring(0, 10);
+        }
+
+        // Comprobar si el cliente ya existe por email
+        var emailBuscado = emailCliente.toLowerCase().trim();
+        var cliente = S.cli.find(function (c) {
+            return c.email && c.email.toLowerCase().trim() === emailBuscado;
+        });
+
+        var clientId;
+        if (cliente) {
+            clientId = cliente.id;
         } else {
-            // Crear nuevo cliente si no existe
-            clientId = gid();
+            clientId = 'c_' + generateId(); // CORRECCIÓN AQUÍ TAMBIÉN
             S.cli.push({
                 id: clientId,
-                nombre: name,
+                nombre: nombreCliente,
                 tipo: 'particular',
-                zona: '',
-                telefono: phone,
-                email: email,
-                direccion: '',
-                frecuencia: 'puntual',
-                fechaAlta: new Date().toISOString().split('T')[0],
-                notas: 'Creado automáticamente desde Cal.com'
+                zona: S.zonas && S.zonas.length ? S.zonas[0] : 'Ciutadella',
+                direccion: 'Dirección por confirmar',
+                telefono: telefonoCliente,
+                email: emailCliente,
+                notes: 'Creado automáticamente desde Cal.com. ' + notasCliente
             });
         }
 
-        // Intentar asociar el tipo de servicio según el título del evento en Cal.com
-        var tipoId = S.tipos.length > 0 ? S.tipos[0].id : '';
-        if (booking.eventType && booking.eventType.title) {
-            var matchedTipo = S.tipos.find(function (t) { 
-                return t.nombre.toLowerCase().includes(booking.eventType.title.toLowerCase()); 
+        var tipoId = 't1'; 
+        if (booking.eventType && booking.eventType.title && S.tipos) {
+            var matchedTipo = S.tipos.find(function (t) {
+                return t.nombre.toLowerCase().includes(booking.eventType.title.toLowerCase());
             });
             if (matchedTipo) tipoId = matchedTipo.id;
         }
 
         // Crear el servicio en el CRM
         S.svc.push({
-            id: gid(),
+            id: uid,
             fecha: dateStr,
             clienteId: clientId,
             tipoServicio: tipoId,
             operario: 'Toni',
-            duracion: '60min',
-            observaciones: 'Reserva automática Cal.com',
+            duracion: (booking.duration || '60') + 'min',
+            observaciones: 'Reserva automática Cal.com: ' + (notasCliente || 'Sin descripción'),
             estado: 'programado'
         });
 
+        // Guardar y refrescar la pantalla de inmediato
         save();
-        toast('¡Reserva de Cal.com sincronizada con el CRM!');
+        render();
+        if (typeof toast === 'function') {
+            toast('¡Reserva de Cal.com sincronizada con éxito!');
+        }
         
-    } catch (e) {
-        console.error("Error procesando reserva de Cal.com:", e);
+    } catch (err) {
+        console.error("Error procesando reserva de Cal.com:", err);
     }
 }
 
