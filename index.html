@@ -7,8 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Script oficial de Cal.com Embed (Versión actualizada) -->
-    <script src="https://cdn.jsdelivr.net/npm/@calcom/embed-js@1.5.1/dist/embed.js"></script>
+    
+    <!-- Script de inicialización de Cal.com (Método oficial Vanilla JS) -->
+    <script>
+      (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal || {}; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.body.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === "init") { const api = { "ui.js": "https://cdn.jsdelivr.net/npm/@calcom/embed-js@1.5.1/dist/embed.js" }; p(api, ar); } else { p(cal, ar); } return cal; }; })(window, "https://cdn.jsdelivr.net/npm/@calcom/embed-js@1.5.1/dist/embed.js");
+      Cal("init", {origin:"https://cal.com"});
+    </script>
+
     <script>
         tailwind.config={theme:{extend:{colors:{forest:{50:'#f0f7f0',500:'#3a6b35',600:'#2d5016',800:'#152808',900:'#0d1a04'},terra:{50:'#fdf5ed',400:'#c67b3c'},cream:{DEFAULT:'#FAF7F2',dark:'#F0EBE2'}},fontFamily:{sans:['Plus Jakarta Sans','sans-serif']}}}}
     </script>
@@ -59,7 +64,6 @@
     <div class="px-3 flex flex-col gap-1">
         <a class="nav-item" onclick="nav('nuevo-cli')"><i class="fa-solid fa-user-plus w-5 text-center"></i> Nuevo cliente</a>
         <a class="nav-item" onclick="nav('nuevo-svc')"><i class="fa-solid fa-circle-plus w-5 text-center"></i> Nuevo servicio</a>
-        <!-- Enlace que abre la vista de Cal.com integrada -->
         <a class="nav-item" onclick="nav('reservar')" style="color:rgba(255,180,80,.75)"><i class="fa-solid fa-calendar-plus w-5 text-center"></i> Reservar cita</a>
     </div>
 </aside>
@@ -400,15 +404,42 @@ function compSvc(id) { var i = S.svc.findIndex(function (s) { return s.id === id
 function rReservar() {
     var o = '<div class="p-5 lg:p-8">';
     o += '<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Reservar Cita</h1><p class="text-sm text-gray-500 mt-1">Las reservas hechas aquí se registran automáticamente en el CRM</p></div>';
-    o += '<button onclick="window.open(\'https://cal.com/joan-pons\',\'_blank\')" class="btn btn-secondary btn-sm"><i class="fa-solid fa-external-link-alt"></i> Abrir Cal.com externo</button></div>';
-    o += '<div class="card p-2 sm:p-4 overflow-hidden" style="min-height: 800px; background: #fff;">';
-    // Web Component oficial de Cal.com que se incrusta
-    o += '<cal-inline data-cal-link="joan-pons" data-cal-config=\'{"layout":"month_view","theme":"light"}\' style="width:100%;height:100%;min-height:780px;display:block;overflow:auto;"></cal-inline>';
+    o += '<button onclick="window.open(\'https://cal.com/joan-pons\',\'_blank\')" class="btn btn-secondary btn-sm"><i class="fa-solid fa-external-link-alt"></i> Abrir externo</button></div>';
+    o += '<div class="card p-4 overflow-hidden" style="min-height: 800px; background: #fff;">';
+    // Contenedor donde Cal.com inyectará el iframe
+    o += '<div id="cal-embed-container" style="width:100%;height:100%;min-height:780px;"></div>';
     o += '</div></div>';
+    
+    // Es NECESARIO usar setTimeout para darle tiempo al DOM a insertar el div antes de llamar a Cal()
+    setTimeout(function() {
+        var container = document.getElementById("cal-embed-container");
+        if (container && typeof Cal !== 'undefined') {
+            container.innerHTML = ''; // Limpiar por si acaso
+            try {
+                Cal("inline", {
+                    elementOrSelector: "#cal-embed-container",
+                    calLink: "joan-pons"
+                });
+                // Configuración de estilos de Cal.com
+                Cal("ui", {
+                    "theme": "light",
+                    "styles": {
+                        "branding": {
+                            "brandColor": "#3a6b35" // Color de tu CRM
+                        }
+                    }
+                });
+            } catch(e) {
+                console.error("Error incrustando Cal.com:", e);
+                container.innerHTML = '<div class="p-8 text-center text-gray-500">Error al cargar el calendario. Intenta usar el botón de abrir externo.</div>';
+            }
+        }
+    }, 300); // 300ms de espera
+    
     return o;
 }
 
-// Función robusta que captura cuando Cal.com confirma una reserva
+// Función que captura cuando Cal.com confirma una reserva
 function handleCalBooking(event) {
     try {
         console.log("Evento de Cal.com detectado:", event.detail);
@@ -416,7 +447,7 @@ function handleCalBooking(event) {
         var detail = event.detail;
         if (!detail) return;
 
-        // Cal.com envía la información en detail.payload o detail.data dependiendo de la versión
+        // Cal.com envía la información en detail.payload o detail.data
         var booking = detail.payload || detail.data;
         if (!booking) return;
 
@@ -481,11 +512,6 @@ function handleCalBooking(event) {
         save();
         toast('¡Reserva de Cal.com sincronizada con el CRM!');
         
-        // Refrescar la interfaz si estamos en una vista relacionada
-        if (S.view === 'proximas' || S.view === 'dashboard' || S.view === 'servicios') {
-            render();
-        }
-
     } catch (e) {
         console.error("Error procesando reserva de Cal.com:", e);
     }
@@ -504,8 +530,8 @@ function init() {
     updNav(); 
     render(); 
 
-    // Escuchador del evento de Cal.com
-    document.addEventListener("cal:bookingSuccessful", handleCalBooking);
+    // Escuchador del evento de Cal.com (window es más fiable que document para CustomEvents)
+    window.addEventListener("cal:bookingSuccessful", handleCalBooking);
 
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); if (S.sbOpen) toggleSB(); } }); 
 }
