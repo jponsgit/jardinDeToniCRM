@@ -94,6 +94,102 @@ var S={view:'dashboard',cli:[],svc:[],tipos:[],selId:null,editCliId:null,editSvc
 
 var _pendingAction = null;
 
+// ============================================================
+// MANEJO DE RESERVAS DESDE CAL.COM
+// ============================================================
+function handleCalBooking(e) {
+    try {
+        console.log("Reserva exitosa detectada:", e.detail);
+        var booking = e.detail.data.booking || e.detail.data;
+        if (!booking) return;
+
+        // 1. EXTRAER LOS DATOS REALES DE LOS CAMPOS (Evita que salgan vacíos)
+        var uid = booking.uid || gid();
+        
+        // Cal.com guarda los asistentes en una lista (attendees)
+        var asistente = (booking.attendees && booking.attendees.length > 0) ? booking.attendees[0] : null;
+        
+        var nombreCliente = asistente ? asistente.name : 'Cliente Cal.com';
+        var emailCliente = asistente ? asistente.email : '';
+        var telefonoCliente = asistente ? (asistente.phoneNumber || '') : '';
+        var notasCliente = booking.description || '';
+
+        // Procesar la fecha y hora que vienen de Cal.com
+        var dateStr = new Date().toISOString().substring(0, 10);
+        if (booking.startTime) {
+            dateStr = booking.startTime.substring(0, 10);
+        }
+
+        // ============================================================
+        // 🚀 ENVIAR A TU PRIMER ESCENARIO DE MAKE (Para guardarlo en el Data Store)
+        // ============================================================
+        // Pon aquí la URL de tu PRIMER escenario (el que tiene el webhook conectado al Data Store)
+        var URL_PRIMER_ESCENARIO_MAKE = 'https://hook.eu1.make.com/m1ooeoxpmrer2qp9ocqc9ig124csxpaa'; 
+        
+        fetch(URL_PRIMER_ESCENARIO_MAKE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(e.detail.data) // Le enviamos todo el bloque de Cal.com directo a Make
+        }).catch(err => console.error("Error enviando copia de respaldo a Make:", err));
+        // ============================================================
+
+        // 2. INSERTAR EN TU CRM (Con nombre, email y teléfono reales)
+        
+        // Comprobar si el cliente ya existe por email para no duplicarlo
+        var emailBuscado = emailCliente.toLowerCase().trim();
+        var cliente = S.cli.find(function (c) {
+            return c.email && c.email.toLowerCase().trim() === emailBuscado;
+        });
+
+        var clientId;
+        if (cliente) {
+            clientId = cliente.id;
+        } else {
+            clientId = 'c_' + gid();
+            S.cli.push({
+                id: clientId,
+                nombre: nombreCliente, // <--- NOMBRE REAL
+                tipo: 'particular',
+                zona: S.zonas && S.zonas.length ? S.zonas[0] : 'Ciutadella',
+                direccion: 'Dirección por confirmar',
+                telefono: telefonoCliente, // <--- TELÉFONO REAL
+                email: emailCliente, // <--- EMAIL REAL
+                notas: 'Creado automáticamente desde Cal.com. ' + notasCliente
+            });
+        }
+
+        // Detectar automáticamente el tipo de servicio según el título del evento
+        var tipoId = 't1'; 
+        if (booking.eventType && booking.eventType.title && S.tipos) {
+            var matchedTipo = S.tipos.find(function (t) {
+                return t.nombre.toLowerCase().includes(booking.eventType.title.toLowerCase());
+            });
+            if (matchedTipo) tipoId = matchedTipo.id;
+        }
+
+        // Crear la cita en los servicios del CRM
+        S.svc.push({
+            id: uid,
+            fecha: dateStr,
+            clienteId: clientId,
+            tipoServicio: tipoId,
+            operario: 'Toni',
+            duracion: (booking.duration || '60') + 'min',
+            observaciones: 'Reserva automática Cal.com: ' + (notasCliente || 'Sin descripción'),
+            estado: 'programado'
+        });
+
+        // Guardar en la memoria local y refrescar la pantalla
+        save();
+        toast('¡Reserva de Cal.com sincronizada con éxito!');
+        render();
+        
+    } catch (e) {
+        console.error("Error procesando reserva de Cal.com:", e);
+    }
+}
+
+
 function openModal(title, msg, action) {
     _pendingAction = action;
     document.getElementById('mt').textContent = title;
