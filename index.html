@@ -94,8 +94,11 @@ var S={view:'dashboard',cli:[],svc:[],tipos:[],selId:null,editCliId:null,editSvc
 
 var _pendingAction = null;
 
+// ============================================================
+// SINCRONIZACIÓN PASIVA CON EL SEGUNDO ESCENARIO DE MAKE
+// ============================================================
 function sincronizarReservasCalCom() {
-    // ⚠️ PON AQUÍ LA URL DE TU SEGUNDO ESCENARIO (El que tiene el Webhook Response)
+    //  ASEGÚRATE DE QUE ESTA URL SEA LA DE TU SEGUNDO ESCENARIO DE MAKE
     var API_URL = 'https://hook.eu1.make.com/89jgvfsxejtqodiaxbnuwag1fuq74axd';
 
     fetch(API_URL)
@@ -105,7 +108,7 @@ function sincronizarReservasCalCom() {
     })
     .then(texto => {
         if (!texto || texto.trim() === "" || texto.trim() === "[]") {
-            console.log("Cal.com: No hay reservas nuevas en el Data Store.");
+            console.log("Cal.com: No hay reservas nuevas en el Data Store de Make.");
             return;
         }
 
@@ -118,7 +121,7 @@ function sincronizarReservasCalCom() {
             var idReservaCalCom = booking.uid || booking.key;
             if (!idReservaCalCom || idReservaCalCom === "undefined") return;
 
-            // Evitar duplicar si ya existe en la pantalla
+            // Evitar duplicar si la cita ya existe en la pantalla
             var yaExisteSvc = S.svc.some(function(s) { return s.id === idReservaCalCom; });
             if (yaExisteSvc) return;
 
@@ -127,18 +130,18 @@ function sincronizarReservasCalCom() {
                 return c.email && c.email.toLowerCase().trim() === emailBuscado;
             });
 
-            // Si el cliente no existe, lo creamos con sus datos REALES sacados del Data Store
+            // Si el cliente no existe, lo creamos asignando los campos correctos
             if (!cliente) {
-                var nuevoClienteId = 'c_cal_' + Date.now() + Math.random().toString(36).substr(2, 3);
+                var nuevoClienteId = 'c_cal_' + generateId();
                 cliente = {
                     id: nuevoClienteId,
                     nombre: booking.nombre && booking.nombre !== "undefined" ? booking.nombre : 'Cliente Cal.com',
                     tipo: 'particular',
                     zona: S.zonas && S.zonas.length ? S.zonas[0] : 'Ciutadella',
-                    direccion: 'Dirección por confirmar',
+                    direccion: booking.direccion || 'Dirección por confirmar',
                     telefono: booking.telefono && booking.telefono !== "undefined" ? booking.telefono : '',
                     email: emailBuscado,
-                    notas: 'Creado desde Cal.com. ' + (booking.notas || '')
+                    notas: 'Creado desde el Data Store de Make. ' + (booking.notas || '') // CORREGIDO: "notas" en vez de "notes"
                 };
                 S.cli.push(cliente);
                 cambios = true;
@@ -157,7 +160,7 @@ function sincronizarReservasCalCom() {
             }
             if (!fechaLimpia) fechaLimpia = new Date().toISOString().substring(0, 10);
 
-            // Crear el servicio
+            // Crear el servicio mapeado
             var nuevoServicio = {
                 id: idReservaCalCom,
                 clienteId: cliente.id,
@@ -177,11 +180,12 @@ function sincronizarReservasCalCom() {
         if (cambios) {
             save();
             render();
-            if (typeof toast === 'function') toast('¡Reservas sincronizadas!');
+            if (typeof toast === 'function') toast('¡Reservas actualizadas desde Make!');
         }
     })
     .catch(error => console.error('Error en la sincronización pasiva:', error));
 }
+
 
 
 function openModal(title, msg, action) {
@@ -532,13 +536,17 @@ function rReservar() {
 // ============================================================
 // MANEJO DE RESERVAS DESDE CAL.COM
 // ============================================================
+
+// ============================================================
+// MANEJO DE RESERVAS EN VIVO DESDE EL EMBED DE CAL.COM
+// ============================================================
 function handleCalBooking(e) {
     try {
-        console.log("Reserva exitosa detectada:", e.detail);
+        console.log("Reserva exitosa detectada en vivo:", e.detail);
         var booking = e.detail.data.booking || e.detail.data;
         if (!booking) return;
 
-        // CORRECCIÓN CRUCIAL: Usamos generateId() en lugar de gid() para que no explote
+        // Usamos la función de ID nativa del CRM para evitar bloqueos
         var uid = booking.uid || generateId();
         
         var asistente = (booking.attendees && booking.attendees.length > 0) ? booking.attendees[0] : null;
@@ -563,7 +571,7 @@ function handleCalBooking(e) {
         if (cliente) {
             clientId = cliente.id;
         } else {
-            clientId = 'c_' + generateId(); // CORRECCIÓN AQUÍ TAMBIÉN
+            clientId = 'c_' + generateId();
             S.cli.push({
                 id: clientId,
                 nombre: nombreCliente,
@@ -572,7 +580,7 @@ function handleCalBooking(e) {
                 direccion: 'Dirección por confirmar',
                 telefono: telefonoCliente,
                 email: emailCliente,
-                notes: 'Creado automáticamente desde Cal.com. ' + notasCliente
+                notas: 'Creado automáticamente en vivo. ' + notasCliente // CORREGIDO: "notas"
             });
         }
 
@@ -592,19 +600,23 @@ function handleCalBooking(e) {
             tipoServicio: tipoId,
             operario: 'Toni',
             duracion: (booking.duration || '60') + 'min',
-            observaciones: 'Reserva automática Cal.com: ' + (notasCliente || 'Sin descripción'),
+            observaciones: 'Reserva en vivo Cal.com: ' + (notasCliente || 'Sin descripción'),
             estado: 'programado'
         });
 
-        // Guardar y refrescar la pantalla de inmediato
+        // Guardamos y renderizamos localmente
         save();
         render();
-        if (typeof toast === 'function') {
-            toast('¡Reserva de Cal.com sincronizada con éxito!');
-        }
+        if (typeof toast === 'function') toast('¡Reserva en vivo procesada!');
+
+        // 🚀 SOLUCIÓN AL PRIMER PROBLEMA: 
+        // Forzamos a que el CRM llame al segundo escenario inmediatamente tras la reserva
+        setTimeout(function() {
+            sincronizarReservasCalCom();
+        }, 1500); // Espera 1.5 segundos para dar tiempo a que Make guarde el registro en el Data Store
         
     } catch (err) {
-        console.error("Error procesando reserva de Cal.com:", err);
+        console.error("Error procesando reserva de Cal.com en vivo:", err);
     }
 }
 
