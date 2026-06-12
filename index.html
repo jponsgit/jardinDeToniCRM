@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>El jardín de Toni - CRM</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -83,6 +84,110 @@
 </div>
 
 <script>
+// ============================================================
+// CONFIGURACIÓN DE SUPABASE
+// ============================================================
+const SUPABASE_URL = 'https://clpyvewcbijjdxsfoons.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_3XXnaX-tvOrtWZoFsgHxrg_8GPYbFJu';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ------------------------------------------------------------
+// Mapeo entre las columnas de Supabase (snake_case) y los
+// objetos que usa el CRM internamente (camelCase)
+// ------------------------------------------------------------
+function cliFromRow(r) { return { id: r.id, nombre: r.nombre, tipo: r.tipo, zona: r.zona, telefono: r.telefono, email: r.email, direccion: r.direccion, frecuencia: r.frecuencia, fechaAlta: r.fecha_alta, notas: r.notas }; }
+function cliToRow(o) { return { nombre: o.nombre, tipo: o.tipo, zona: o.zona, telefono: o.telefono, email: o.email, direccion: o.direccion, frecuencia: o.frecuencia, fecha_alta: o.fechaAlta, notas: o.notas }; }
+
+function tipoFromRow(r) { return { id: r.id, nombre: r.nombre, icono: r.icono, duracion: r.duracion }; }
+function tipoToRow(o) { return { nombre: o.nombre, icono: o.icono, duracion: o.duracion }; }
+
+function svcFromRow(r) { return { id: r.id, fecha: r.fecha, clienteId: r.cliente_id, tipoServicio: r.tipo_servicio_id, operario: r.operario, duracion: r.duracion, observaciones: r.observaciones, estado: r.estado }; }
+function svcToRow(o) { return { fecha: o.fecha, cliente_id: o.clienteId || null, tipo_servicio_id: o.tipoServicio || null, operario: o.operario, duracion: o.duracion, observaciones: o.observaciones, estado: o.estado }; }
+
+async function dbLoadAll() {
+    var [c, t, s] = await Promise.all([
+        sb.from('clientes').select('*'),
+        sb.from('tipos_servicio').select('*'),
+        sb.from('servicios').select('*')
+    ]);
+    if (c.error) console.error('Supabase load error (clientes)', c.error);
+    if (t.error) console.error('Supabase load error (tipos_servicio)', t.error);
+    if (s.error) console.error('Supabase load error (servicios)', s.error);
+    return {
+        cli: c.data ? c.data.map(cliFromRow) : [],
+        tipos: t.data ? t.data.map(tipoFromRow) : [],
+        svc: s.data ? s.data.map(svcFromRow) : []
+    };
+}
+
+// --- Clientes ---
+async function dbSaveCliente(obj) {
+    try {
+        if (obj.id) {
+            var { error } = await sb.from('clientes').update(cliToRow(obj)).eq('id', obj.id);
+            if (error) { console.error(error); toast('Error guardando cliente en Supabase', 'err'); }
+            return obj;
+        } else {
+            var { data, error } = await sb.from('clientes').insert(cliToRow(obj)).select().single();
+            if (error) { console.error(error); toast('Error creando cliente en Supabase', 'err'); return obj; }
+            return cliFromRow(data);
+        }
+    } catch (e) { console.error(e); toast('Error de conexión con Supabase', 'err'); return obj; }
+}
+async function dbDeleteCliente(id) {
+    try { var { error } = await sb.from('clientes').delete().eq('id', id); if (error) console.error(error); }
+    catch (e) { console.error(e); }
+}
+
+// --- Tipos de servicio ---
+async function dbSaveTipo(obj) {
+    try {
+        if (obj.id) {
+            var { error } = await sb.from('tipos_servicio').update(tipoToRow(obj)).eq('id', obj.id);
+            if (error) { console.error(error); toast('Error guardando tipo en Supabase', 'err'); }
+            return obj;
+        } else {
+            var { data, error } = await sb.from('tipos_servicio').insert(tipoToRow(obj)).select().single();
+            if (error) { console.error(error); toast('Error creando tipo en Supabase', 'err'); return obj; }
+            return tipoFromRow(data);
+        }
+    } catch (e) { console.error(e); toast('Error de conexión con Supabase', 'err'); return obj; }
+}
+async function dbDeleteTipo(id) {
+    try { var { error } = await sb.from('tipos_servicio').delete().eq('id', id); if (error) console.error(error); }
+    catch (e) { console.error(e); }
+}
+
+// --- Servicios ---
+async function dbSaveServicio(obj) {
+    try {
+        if (obj.id) {
+            var { error } = await sb.from('servicios').update(svcToRow(obj)).eq('id', obj.id);
+            if (error) { console.error(error); toast('Error guardando servicio en Supabase', 'err'); }
+            return obj;
+        } else {
+            var { data, error } = await sb.from('servicios').insert(svcToRow(obj)).select().single();
+            if (error) { console.error(error); toast('Error creando servicio en Supabase', 'err'); return obj; }
+            return svcFromRow(data);
+        }
+    } catch (e) { console.error(e); toast('Error de conexión con Supabase', 'err'); return obj; }
+}
+async function dbDeleteServicio(id) {
+    try { var { error } = await sb.from('servicios').delete().eq('id', id); if (error) console.error(error); }
+    catch (e) { console.error(e); }
+}
+async function dbDeleteServiciosByCliente(clienteId) {
+    try { var { error } = await sb.from('servicios').delete().eq('cliente_id', clienteId); if (error) console.error(error); }
+    catch (e) { console.error(e); }
+}
+async function dbDeleteServiciosByTipo(tipoId) {
+    try { var { error } = await sb.from('servicios').delete().eq('tipo_servicio_id', tipoId); if (error) console.error(error); }
+    catch (e) { console.error(e); }
+}
+</script>
+
+<script>
 var ZONAS=['Ciutadella','Sa Caleta','Cala en Bosch','Cala Blanca','Cala en Blanes'];
 var TCLI=[{v:'particular',l:'Particular',c:'#3a6b35',b:'#f0f7f0'},{v:'comunidad',l:'Comunidad',c:'#b45309',b:'#fffbeb'},{v:'agencia',l:'Agencia',c:'#6b5b3a',b:'#faf6f0'}];
 var FREQ=[{v:'semanal',l:'Semanal'},{v:'quincenal',l:'Quincenal'},{v:'mensual',l:'Mensual'},{v:'bimestral',l:'Bimestral'},{v:'trimestral',l:'Trimestral'},{v:'puntual',l:'Puntual'}];
@@ -97,165 +202,25 @@ var _pendingAction = null;
 // ============================================================
 // ESCUCHADOR EN VIVO DEL CALENDARIO (MÉTODO ULTRA-RÁPIDO)
 // ============================================================
-function handleCalBooking(e) {
+// El webhook "BOOKING_CREATED" de Cal.com llama directamente a tu
+// Edge Function de Supabase, que ya inserta el cliente/servicio en
+// las tablas. Aquí solo recargamos los datos desde Supabase y
+// redibujamos la pantalla para que aparezca al instante.
+async function handleCalBooking(e) {
     try {
         console.log("¡Reserva detectada en vivo desde el widget!", e.detail);
-        
-        // Extraer el bloque de datos que nos manda Cal.com a la pantalla
-        var booking = e.detail.data.booking || e.detail.data;
-        if (!booking) return;
-
-        // Generamos IDs usando la función nativa de tu archivo: gid()
-        var uid = booking.uid || gid();
-        var asistente = (booking.attendees && booking.attendees.length > 0) ? booking.attendees[0] : null;
-        
-        var nombreCliente = asistente ? asistente.name : 'Cliente Cal.com';
-        var emailCliente = asistente ? asistente.email : '';
-        var telefonoCliente = asistente ? (asistente.phoneNumber || '') : '';
-        var notasCliente = booking.description || '';
-
-        // Extraer la fecha de la cita
-        var dateStr = new Date().toISOString().substring(0, 10);
-        if (booking.startTime) {
-            dateStr = booking.startTime.substring(0, 10);
-        }
-
-        // 1. Evitar duplicados: Comprobamos si el cliente ya existe en tu lista por Email
-        var emailBuscado = emailCliente.toLowerCase().trim();
-        var cliente = S.cli.find(function (c) {
-            return c.email && c.email.toLowerCase().trim() === emailBuscado;
-        });
-
-        var clientId;
-        if (cliente) {
-            clientId = cliente.id;
-        } else {
-            // Si no existe, lo creamos directamente en el CRM en este instante
-            clientId = 'c_' + gid();
-            S.cli.push({
-                id: clientId,
-                nombre: nombreCliente,
-                tipo: 'particular',
-                zona: S.zonas && S.zonas.length ? S.zonas[0] : 'Ciutadella',
-                direccion: 'Dirección por confirmar',
-                telefono: telefonoCliente,
-                email: emailCliente,
-                notas: 'Creado al instante desde Cal.com. ' + notasCliente
-            });
-        }
-
-        // 2. Comprobar si la cita ya existe para no duplicarla en la agenda
-        var yaExisteSvc = S.svc.some(function(s) { return s.id === uid; });
-        if (!yaExisteSvc) {
-            var tipoId = 't1'; 
-            if (booking.eventType && booking.eventType.title && S.tipos) {
-                var matchedTipo = S.tipos.find(function (t) {
-                    return t.nombre.toLowerCase().includes(booking.eventType.title.toLowerCase());
-                });
-                if (matchedTipo) tipoId = matchedTipo.id;
-            }
-
-            // Insertamos la cita en el calendario del CRM
-            S.svc.push({
-                id: uid,
-                fecha: dateStr,
-                clienteId: clientId,
-                tipoServicio: tipoId,
-                operario: 'Toni',
-                duracion: (booking.duration || '60') + 'min',
-                observaciones: 'Reserva en directo: ' + (notasCliente || 'Sin observaciones'),
-                estado: 'programado'
-            });
-        }
-
-        // 3. Guardar en la memoria del navegador y redibujar la pantalla inmediatamente
+        // Pequeño margen para que la Edge Function termine de escribir en Supabase
+        await new Promise(function (r) { setTimeout(r, 1500); });
+        var d = await dbLoadAll();
+        S.cli = d.cli; S.svc = d.svc; S.tipos = d.tipos;
         save();
         render();
-        
         if (typeof toast === 'function') {
-            toast('¡Cita sincronizada en pantalla automáticamente!');
+            toast('¡Cita sincronizada desde Cal.com!');
         }
-        
     } catch (err) {
         console.error("Error crítico en el procesado de Cal.com:", err);
     }
-}
-
-// ============================================================
-// FUNCIÓN PASIVA DE RESPALDO (Por si abres el CRM desde otro PC)
-// ============================================================
-function sincronizarReservasCalCom() {
-    // Pon aquí tu SEGUNDO escenario (el que lee del Data Store)
-    var API_URL = 'https://hook.eu1.make.com/89jgvfsxejtqodiaxbnuwag1fuq74axd';
-
-    fetch(API_URL)
-    .then(response => {
-        if (!response.ok) throw new Error('Error de conexión con Make');
-        return response.text();
-    })
-    .then(texto => {
-        if (!texto || texto.trim() === "" || texto.trim() === "[]") return;
-
-        var nuevasReservas = JSON.parse(texto);
-        var cambios = false;
-
-        if (!Array.isArray(nuevasReservas)) return;
-
-        nuevasReservas.forEach(booking => {
-            var idReservaCalCom = booking.uid || booking.key;
-            if (!idReservaCalCom || idReservaCalCom === "undefined") return;
-
-            var yaExisteSvc = S.svc.some(function(s) { return s.id === idReservaCalCom; });
-            if (yaExisteSvc) return;
-
-            var emailBuscado = booking.email ? booking.email.toLowerCase().trim() : '';
-            var cliente = S.cli.find(function(c) {
-                return c.email && c.email.toLowerCase().trim() === emailBuscado;
-            });
-
-            if (!cliente) {
-                var nuevoClienteId = 'c_cal_' + gid();
-                cliente = {
-                    id: nuevoClienteId,
-                    nombre: booking.nombre && booking.nombre !== "undefined" ? booking.nombre : 'Cliente Cal.com',
-                    tipo: 'particular',
-                    zona: S.zonas && S.zonas.length ? S.zonas[0] : 'Ciutadella',
-                    direccion: 'Dirección por confirmar',
-                    telefono: booking.telefono && booking.telefono !== "undefined" ? booking.telefono : '',
-                    email: emailBuscado,
-                    notas: 'Sincronizado desde Data Store. ' + (booking.notas || '')
-                };
-                S.cli.push(cliente);
-                cambios = true;
-            }
-
-            var fechaLimpia = '';
-            if (booking.fecha_hora) {
-                var d = new Date(booking.fecha_hora.replace(' ', 'T'));
-                if (!isNaN(d.getTime())) fechaLimpia = d.toISOString().substring(0, 10);
-            }
-            if (!fechaLimpia) fechaLimpia = new Date().toISOString().substring(0, 10);
-
-            S.svc.push({
-                id: idReservaCalCom,
-                clienteId: cliente.id,
-                tipoServicio: S.tipos && S.tipos.length ? S.tipos[0].id : 't1',
-                operario: 'Toni',
-                fecha: fechaLimpia,
-                hora: '10:00',
-                duracion: (booking.duracion || '45') + 'min',
-                observaciones: 'Reserva recuperada: ' + (booking.notas || 'Sin descripción'),
-                estado: 'programado'
-            });
-            cambios = true;
-        });
-
-        if (cambios) {
-            save();
-            render();
-        }
-    })
-    .catch(error => console.error('Respaldo pasivo:', error));
 }
 
 function openModal(title, msg, action) {
@@ -295,7 +260,9 @@ function delCliente(id) {
     openModal('Eliminar cliente', '¿Eliminar a <strong>' + esc(c.nombre) + '</strong> y todos sus servicios?', function () {
         S.svc = S.svc.filter(function (s) { return s.clienteId !== id; });
         S.cli = S.cli.filter(function (x) { return x.id !== id; });
-        save(); toast('Cliente eliminado'); nav('clientes');
+        save();
+        dbDeleteCliente(id); // ON DELETE CASCADE en servicios se encarga de los servicios asociados
+        toast('Cliente eliminado'); nav('clientes');
     });
 }
 
@@ -304,7 +271,9 @@ function delServicio(id) {
     var c = gCI(s.clienteId); var t = gTS(s.tipoServicio);
     openModal('Eliminar servicio', '¿Eliminar <strong>' + esc(t.nombre) + '</strong> del <strong>' + fDate(s.fecha) + '</strong>?', function () {
         S.svc = S.svc.filter(function (x) { return x.id !== id; });
-        save(); toast('Servicio eliminado'); render();
+        save();
+        dbDeleteServicio(id);
+        toast('Servicio eliminado'); render();
     });
 }
 
@@ -316,37 +285,25 @@ function delTipo(id) {
     openModal('Eliminar tipo', msg, function () {
         S.svc = S.svc.filter(function (s) { return s.tipoServicio !== id; });
         S.tipos = S.tipos.filter(function (x) { return x.id !== id; });
-        save(); toast('Tipo eliminado'); render();
+        save();
+        dbDeleteServiciosByTipo(id);
+        dbDeleteTipo(id);
+        toast('Tipo eliminado'); render();
     });
 }
 
 // ============================================================
-// PERSISTENCIA (LOCALSTORAGE)
+// PERSISTENCIA (SUPABASE)
 // ============================================================
-var KEY = 'toni_crm_v3';
-
-function save() { 
-    try {
-        localStorage.setItem(KEY, JSON.stringify({ cli: S.cli, svc: S.svc, tipos: S.tipos })); 
-    } catch(e) {
-        console.error("Error guardando en localStorage", e);
-    }
-}
+// Las operaciones de guardado/borrado puntuales se hacen directamente
+// con dbUpsert/dbDelete/dbDeleteWhere en cada función (saveCli, saveSvc,
+// saveTipo, delCliente, delServicio, delTipo, compSvc, etc).
+// save() se mantiene como función vacía por compatibilidad con el resto
+// del código (ya no usa localStorage).
+function save() {}
 
 function load() {
-    try {
-        var r = localStorage.getItem(KEY);
-        if (r) {
-            var d = JSON.parse(r);
-            S.cli = Array.isArray(d.cli) ? d.cli : [];
-            S.svc = Array.isArray(d.svc) ? d.svc : [];
-            S.tipos = Array.isArray(d.tipos) ? d.tipos : [];
-            return true;
-        }
-    } catch(e) {
-        console.error("Error cargando localStorage", e);
-    }
-    return false;
+    return false; // la carga real se hace de forma asíncrona en init() desde Supabase
 }
 
 function defTipos() { return [{ id: 't1', nombre: 'Mantenimiento de piscinas', icono: 'fa-water-ladder', duracion: '60min' }, { id: 't2', nombre: 'Instalación y reparación de sistema de riego', icono: 'fa-faucet-drip', duracion: '90min' }, { id: 't3', nombre: 'Poda de árboles y setos', icono: 'fa-scissors', duracion: '30min' }, { id: 't4', nombre: 'Mantenimiento de jardín', icono: 'fa-tree', duracion: '45min' }]; }
@@ -479,7 +436,7 @@ function rFC(edit) { var c = { nombre: '', tipo: 'particular', zona: '', telefon
 function fi(l, t, n, v, ph, rq) { return '<div><label class="form-label">' + l + '</label><input type="' + t + '" name="' + n + '" class="form-input" value="' + esc(v) + '" ' + (rq ? 'required' : '') + ' placeholder="' + ph + '"></div>'; }
 function fi2(label, name, value, ph) { return '<label class="form-label">' + label + '</label><input type="text" name="' + name + '" class="form-input" value="' + esc(value) + '" placeholder="' + ph + '">'; }
 
-function saveCli(ev, edit) {
+async function saveCli(ev, edit) {
     ev.preventDefault();
     var f = ev.target;
     var d = {
@@ -500,13 +457,15 @@ function saveCli(ev, edit) {
     if (edit && S.editCliId) {
         var i = S.cli.findIndex(function (c) { return c.id === S.editCliId; });
         if (i !== -1) S.cli[i] = Object.assign({}, S.cli[i], d);
+        await dbSaveCliente(S.cli[i]);
         save();
         toast('Cliente actualizado');
         S.selId = S.editCliId;
         S.editCliId = null;
         nav('ficha');
     } else {
-        S.cli.push(Object.assign({ id: gid() }, d));
+        var nuevoCli = await dbSaveCliente(d);
+        S.cli.push(nuevoCli);
         save();
         toast('Cliente creado');
         S.editCliId = null;
@@ -534,7 +493,7 @@ function rFS(edit) { var s = { fecha: new Date().toISOString().split('T')[0], cl
     o += '<div class="sm:col-span-2"><label class="form-label">Observaciones</label><textarea name="observaciones" class="form-input" rows="3">' + esc(s.observaciones) + '</textarea></div>';
     o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Registrar') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'' + bk + '\')">Cancelar</button>'; if (edit) o += '<button type="button" class="btn btn-danger btn-sm ml-auto" onclick="delServicio(\'' + s.id + '\')"><i class="fa-solid fa-trash text-xs"></i> Eliminar</button>'; o += '</div></form></div>'; return o; }
 function autoDur(tid) { var t = S.tipos.find(function (x) { return x.id === tid; }); if (t) { var s = document.getElementById('dur-sel'); if (s) s.value = t.duracion; } }
-function saveSvc(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { fecha: f.fecha.value, clienteId: f.clienteId.value, tipoServicio: f.tipoServicio.value, operario: f.operario.value, duracion: f.duracion.value, observaciones: f.observaciones.value.trim(), estado: f.estado.value }; if (!d.clienteId || !d.fecha) { toast('Faltan datos', 'err'); return; } if (edit && S.editSvcId) { var i = S.svc.findIndex(function (s) { return s.id === S.editSvcId; }); if (i !== -1) S.svc[i] = Object.assign({}, S.svc[i], d); save(); toast('Servicio actualizado'); S.editSvcId = null; nav('servicios'); } else { S.svc.push(Object.assign({ id: gid() }, d)); save(); toast('Servicio registrado'); S.preCliId = null; nav('servicios'); } }
+async function saveSvc(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { fecha: f.fecha.value, clienteId: f.clienteId.value, tipoServicio: f.tipoServicio.value, operario: f.operario.value, duracion: f.duracion.value, observaciones: f.observaciones.value.trim(), estado: f.estado.value }; if (!d.clienteId || !d.fecha) { toast('Faltan datos', 'err'); return; } if (edit && S.editSvcId) { var i = S.svc.findIndex(function (s) { return s.id === S.editSvcId; }); if (i !== -1) S.svc[i] = Object.assign({}, S.svc[i], d); await dbSaveServicio(S.svc[i]); save(); toast('Servicio actualizado'); S.editSvcId = null; nav('servicios'); } else { var nuevoSvc = await dbSaveServicio(d); S.svc.push(nuevoSvc); save(); toast('Servicio registrado'); S.preCliId = null; nav('servicios'); } }
 
 // TIPOS DE SERVICIO
 function rTipos() {
@@ -550,7 +509,7 @@ function rFT(edit) { var t = { nombre: '', icono: 'fa-tree', duracion: '60min' }
     ICONS.forEach(function (ic) { var sel = t.icono === ic; o += '<button type="button" onclick="document.querySelectorAll(\'.ico-btn\').forEach(function(b){b.classList.remove(\'ring-2\',\'ring-forest-500\')});this.classList.add(\'ring-2\',\'ring-forest-500\');document.getElementById(\'sel-icon\').value=\'' + ic + '\'" class="ico-btn w-10 h-10 rounded-lg border flex items-center justify-center cursor-pointer hover:bg-forest-50 transition ' + (sel ? 'ring-2 ring-forest-500 bg-forest-50' : 'bg-white border-[#E7E0D8]') + '"><i class="fa-solid ' + ic + ' text-forest-600"></i></button>'; });
     o += '<input type="hidden" name="icono" id="sel-icon" value="' + t.icono + '"></div></div>';
     o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Crear') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'tipos\')">Cancelar</button></div></form></div>'; return o; }
-function saveTipo(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { nombre: f.nombre.value.trim(), icono: f.icono.value, duracion: f.duracion.value }; if (!d.nombre) { toast('Pon un nombre', 'err'); return; } if (edit && S.editTipoId) { var i = S.tipos.findIndex(function (t) { return t.id === S.editTipoId; }); if (i !== -1) S.tipos[i] = Object.assign({}, S.tipos[i], d); save(); toast('Tipo actualizado'); S.editTipoId = null; nav('tipos'); } else { S.tipos.push(Object.assign({ id: gid() }, d)); save(); toast('Tipo creado'); nav('tipos'); } }
+async function saveTipo(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { nombre: f.nombre.value.trim(), icono: f.icono.value, duracion: f.duracion.value }; if (!d.nombre) { toast('Pon un nombre', 'err'); return; } if (edit && S.editTipoId) { var i = S.tipos.findIndex(function (t) { return t.id === S.editTipoId; }); if (i !== -1) S.tipos[i] = Object.assign({}, S.tipos[i], d); await dbSaveTipo(S.tipos[i]); save(); toast('Tipo actualizado'); S.editTipoId = null; nav('tipos'); } else { var nuevoTipo = await dbSaveTipo(d); S.tipos.push(nuevoTipo); save(); toast('Tipo creado'); nav('tipos'); } }
 
 // PRÓXIMAS VISITAS
 function rProx() { var h = new Date(); h.setHours(0, 0, 0, 0); var hs = h.toISOString().split('T')[0]; var px = S.svc.filter(function (s) { return s.estado === 'programado' && s.fecha >= hs; }).sort(function (a, b) { return a.fecha.localeCompare(b.fecha); });
@@ -560,7 +519,7 @@ function rProx() { var h = new Date(); h.setHours(0, 0, 0, 0); var hs = h.toISOS
     if (!px.length) o += '<div class="card p-12 text-center text-gray-400">Sin visitas programadas</div>';
     else ord.forEach(function (k) { if (!g[k]) return; o += '<div class="mb-6"><div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:' + gC[k] + '20"><i class="fa-solid ' + gI[k] + ' text-xs" style="color:' + gC[k] + '"></i></div><h2 class="font-bold text-forest-900">' + k + '</h2><span class="text-xs text-gray-400">(' + g[k].length + ')</span></div><div class="flex flex-col gap-2">'; g[k].forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); o += '<div class="card p-4"><div class="flex items-start gap-3"><div class="avatar w-10 h-10 text-xs mt-0.5" style="background:' + (c ? gCol(c.nombre) : '#9ca3af') + '">' + (c ? gIni(c.nombre) : '?') + '</div><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1"><span class="font-bold text-sm text-gray-900 cursor-pointer hover:text-forest-600" onclick="nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})">' + (c ? esc(c.nombre) : '—') + '</span><span class="text-xs text-gray-400">' + fShort(s.fecha) + '</span></div><div class="flex items-center gap-2 text-sm text-gray-600"><i class="fa-solid ' + t.icono + ' text-xs text-gray-400"></i>' + esc(t.nombre) + '</div><div class="flex gap-3 text-xs text-gray-500 mt-1"><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span><span><i class="fa-solid fa-clock mr-1"></i>' + (s.duracion || '-') + '</span></div></div><div class="flex gap-1.5 flex-shrink-0"><button onclick="compSvc(\'' + s.id + '\')" class="bact" title="Completar"><i class="fa-solid fa-check"></i></button><button onclick="delServicio(\'' + s.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div></div>'; }); o += '</div></div>'; })
     o += '</div>'; return o; }
-function compSvc(id) { var i = S.svc.findIndex(function (s) { return s.id === id; }); if (i !== -1) { S.svc[i].estado = 'completado'; save(); toast('Completado'); render(); } }
+function compSvc(id) { var i = S.svc.findIndex(function (s) { return s.id === id; }); if (i !== -1) { S.svc[i].estado = 'completado'; save(); dbSaveServicio(S.svc[i]); toast('Completado'); render(); } }
 
 // ============================================================
 // INTEGRACIÓN CAL.COM - VISTA Y FUNCIÓN
@@ -610,12 +569,10 @@ function rReservar() {
 // ============================================================
 // INICIALIZACIÓN
 // ============================================================
-function init() { 
-    var loaded = load();
-    if (!loaded) {
-        sample();
-    }
-    if (!S.tipos || !S.tipos.length) S.tipos = defTipos();
+async function init() { 
+    var d = await dbLoadAll();
+    S.cli = d.cli; S.svc = d.svc; S.tipos = d.tipos;
+
     S.view = 'dashboard'; 
     updNav(); 
     render(); 
