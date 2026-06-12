@@ -96,8 +96,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Mapeo entre las columnas de Supabase (snake_case) y los
 // objetos que usa el CRM internamente (camelCase)
 // ------------------------------------------------------------
-function cliFromRow(r) { return { id: r.id, nombre: r.nombre, tipo: r.tipo, zona: r.zona, telefono: r.telefono, email: r.email, direccion: r.direccion, frecuencia: r.frecuencia, fechaAlta: r.fecha_alta, notas: r.notas }; }
-function cliToRow(o) { return { nombre: o.nombre, tipo: o.tipo, zona: o.zona, telefono: o.telefono, email: o.email, direccion: o.direccion, frecuencia: o.frecuencia, fecha_alta: o.fechaAlta, notas: o.notas }; }
+function cliFromRow(r) { return { id: r.id, nombre: r.nombre, tipo: r.tipo, telefono: r.telefono, email: r.email, direccion: r.direccion, frecuencia: r.frecuencia, fechaAlta: r.fecha_alta, notas: r.notas }; }
+function cliToRow(o) { return { nombre: o.nombre, tipo: o.tipo, telefono: o.telefono, email: o.email, direccion: o.direccion, frecuencia: o.frecuencia, fecha_alta: o.fechaAlta, notas: o.notas }; }
 
 function tipoFromRow(r) { return { id: r.id, nombre: r.nombre, icono: r.icono, duracion: r.duracion }; }
 function tipoToRow(o) { return { nombre: o.nombre, icono: o.icono, duracion: o.duracion }; }
@@ -188,28 +188,22 @@ async function dbDeleteServiciosByTipo(tipoId) {
 </script>
 
 <script>
-var ZONAS=['Ciutadella','Sa Caleta','Cala en Bosch','Cala Blanca','Cala en Blanes'];
 var TCLI=[{v:'particular',l:'Particular',c:'#3a6b35',b:'#f0f7f0'},{v:'comunidad',l:'Comunidad',c:'#b45309',b:'#fffbeb'},{v:'agencia',l:'Agencia',c:'#6b5b3a',b:'#faf6f0'}];
 var FREQ=[{v:'semanal',l:'Semanal'},{v:'quincenal',l:'Quincenal'},{v:'mensual',l:'Mensual'},{v:'bimestral',l:'Bimestral'},{v:'trimestral',l:'Trimestral'},{v:'puntual',l:'Puntual'}];
 var ICONS=['fa-tree','fa-water-ladder','fa-scissors','fa-faucet-drip','fa-broom','fa-spray-can','fa-tractor','fa-ellipsis'];
 var OPER=['Toni','Xavi','Marc','Pere','Miquel'];
 var EST=[{v:'programado',l:'Programado',c:'#b45309',b:'#fffbeb'},{v:'completado',l:'Completado',c:'#3a6b35',b:'#f0f7f0'},{v:'cancelado',l:'Cancelado',c:'#9ca3af',b:'#f3f4f6'}];
 
-var S={view:'dashboard',cli:[],svc:[],tipos:[],selId:null,editCliId:null,editSvcId:null,editTipoId:null,preCliId:null,fCli:{b:'',t:'',z:''},fSvc:{b:'',t:'',e:''},sbOpen:false};
+var S={view:'dashboard',cli:[],svc:[],tipos:[],selId:null,editCliId:null,editSvcId:null,editTipoId:null,preCliId:null,fCli:{b:'',t:''},fSvc:{b:'',t:'',e:''},sbOpen:false};
 
 var _pendingAction = null;
 
 // ============================================================
 // ESCUCHADOR EN VIVO DEL CALENDARIO (MÉTODO ULTRA-RÁPIDO)
 // ============================================================
-// El webhook "BOOKING_CREATED" de Cal.com llama directamente a tu
-// Edge Function de Supabase, que ya inserta el cliente/servicio en
-// las tablas. Aquí solo recargamos los datos desde Supabase y
-// redibujamos la pantalla para que aparezca al instante.
 async function handleCalBooking(e) {
     try {
         console.log("¡Reserva detectada en vivo desde el widget!", e.detail);
-        // Pequeño margen para que la Edge Function termine de escribir en Supabase
         await new Promise(function (r) { setTimeout(r, 1500); });
         var d = await dbLoadAll();
         S.cli = d.cli; S.svc = d.svc; S.tipos = d.tipos;
@@ -261,7 +255,7 @@ function delCliente(id) {
         S.svc = S.svc.filter(function (s) { return s.clienteId !== id; });
         S.cli = S.cli.filter(function (x) { return x.id !== id; });
         save();
-        dbDeleteCliente(id); // ON DELETE CASCADE en servicios se encarga de los servicios asociados
+        dbDeleteCliente(id); 
         toast('Cliente eliminado'); nav('clientes');
     });
 }
@@ -295,15 +289,10 @@ function delTipo(id) {
 // ============================================================
 // PERSISTENCIA (SUPABASE)
 // ============================================================
-// Las operaciones de guardado/borrado puntuales se hacen directamente
-// con dbUpsert/dbDelete/dbDeleteWhere en cada función (saveCli, saveSvc,
-// saveTipo, delCliente, delServicio, delTipo, compSvc, etc).
-// save() se mantiene como función vacía por compatibilidad con el resto
-// del código (ya no usa localStorage).
 function save() {}
 
 function load() {
-    return false; // la carga real se hace de forma asíncrona en init() desde Supabase
+    return false; 
 }
 
 function defTipos() { return [{ id: 't1', nombre: 'Mantenimiento de piscinas', icono: 'fa-water-ladder', duracion: '60min' }, { id: 't2', nombre: 'Instalación y reparación de sistema de riego', icono: 'fa-faucet-drip', duracion: '90min' }, { id: 't3', nombre: 'Poda de árboles y setos', icono: 'fa-scissors', duracion: '30min' }, { id: 't4', nombre: 'Mantenimiento de jardín', icono: 'fa-tree', duracion: '45min' }]; }
@@ -312,12 +301,12 @@ function sample() {
     var h = new Date(); function ha(d) { var f = new Date(h); f.setDate(f.getDate() - d); return f.toISOString().split('T')[0]; } function en(d) { var f = new Date(h); f.setDate(f.getDate() + d); return f.toISOString().split('T')[0]; }
     S.tipos = defTipos();
     S.cli = [
-        { id: 'c1', nombre: 'María García Soler', tipo: 'particular', zona: 'Cala Blanca', telefono: '671 234 567', email: 'maria@email.com', direccion: 'C/ Miramar 8', frecuencia: 'mensual', fechaAlta: '2024-01-10', notas: '' },
-        { id: 'c2', nombre: 'Comunidad Bahía Azul', tipo: 'comunidad', zona: 'Cala en Bosch', telefono: '971 362 045', email: 'admin@bahiazul.es', direccion: 'Urb. Bahía Azul', frecuencia: 'quincenal', fechaAlta: '2023-06-15', notas: '24 viviendas.' },
-        { id: 'c3', nombre: 'Hotel Son Vell', tipo: 'agencia', zona: 'Ciutadella', telefono: '971 358 900', email: 'info@sonvell.com', direccion: 'Ctra. Ciutadella km 3', frecuencia: 'semanal', fechaAlta: '2023-03-22', notas: '2 piscinas.' },
-        { id: 'c4', nombre: 'Joan Pons Mascaró', tipo: 'particular', zona: 'Cala en Blanes', telefono: '629 876 543', email: 'joan@email.com', direccion: 'C/ Ponderosa 12', frecuencia: 'mensual', fechaAlta: '2023-09-05', notas: '' },
-        { id: 'c5', nombre: 'Comunidad Los Pinos', tipo: 'comunidad', zona: 'Sa Caleta', telefono: '971 150 230', email: 'pres@lospinos.es', direccion: 'Urb. Los Pinos 8', frecuencia: 'quincenal', fechaAlta: '2023-11-18', notas: '16 viviendas.' },
-        { id: 'c6', nombre: 'Inmobiliaria Menorca Viva', tipo: 'agencia', zona: 'Ciutadella', telefono: '971 369 111', email: 'info@menorcaviva.es', direccion: 'C/ Isabel II 24', frecuencia: 'mensual', fechaAlta: '2024-02-01', notas: '' }
+        { id: 'c1', nombre: 'María García Soler', tipo: 'particular', telefono: '671 234 567', email: 'maria@email.com', direccion: 'C/ Miramar 8', frecuencia: 'mensual', fechaAlta: '2024-01-10', notas: '' },
+        { id: 'c2', nombre: 'Comunidad Bahía Azul', tipo: 'comunidad', telefono: '971 362 045', email: 'admin@bahiazul.es', direccion: 'Urb. Bahía Azul', frecuencia: 'quincenal', fechaAlta: '2023-06-15', notas: '24 viviendas.' },
+        { id: 'c3', nombre: 'Hotel Son Vell', tipo: 'agencia', telefono: '971 358 900', email: 'info@sonvell.com', direccion: 'Ctra. Ciutadella km 3', frecuencia: 'semanal', fechaAlta: '2023-03-22', notas: '2 piscinas.' },
+        { id: 'c4', nombre: 'Joan Pons Mascaró', tipo: 'particular', telefono: '629 876 543', email: 'joan@email.com', direccion: 'C/ Ponderosa 12', frecuencia: 'mensual', fechaAlta: '2023-09-05', notas: '' },
+        { id: 'c5', nombre: 'Comunidad Los Pinos', tipo: 'comunidad', telefono: '971 150 230', email: 'pres@lospinos.es', direccion: 'Urb. Los Pinos 8', frecuencia: 'quincenal', fechaAlta: '2023-11-18', notas: '16 viviendas.' },
+        { id: 'c6', nombre: 'Inmobiliaria Menorca Viva', tipo: 'agencia', telefono: '971 369 111', email: 'info@menorcaviva.es', direccion: 'C/ Isabel II 24', frecuencia: 'mensual', fechaAlta: '2024-02-01', notas: '' }
     ];
     S.svc = [
         { id: 's1', fecha: ha(30), clienteId: 'c2', tipoServicio: 't1', operario: 'Xavi', duracion: '60min', observaciones: 'Mantenimiento piscina.', estado: 'completado' },
@@ -407,27 +396,26 @@ function sc(t, v, sub, col, ico, cls, pulse) { return '<div class="stat-card" st
 function pxCard(t, arr) { var o = '<div class="card"><div class="px-5 py-4 border-b border-[#F0EBE2]"><h2 class="font-bold text-forest-900">' + t + '</h2></div>'; if (!arr.length) o += '<div class="p-8 text-center text-gray-400"><p class="text-sm">No hay datos</p></div>'; else arr.forEach(function (s) { var c = gCI(s.clienteId); var t2 = gTS(s.tipoServicio); o += '<div class="flex items-center gap-3 px-5 py-3 border-b border-[#F0EBE2] last:border-b-0 hover:bg-cream/50 cursor-pointer" onclick="nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})"><div class="w-9 h-9 rounded-lg flex items-center justify-center ' + (s.estado === 'programado' ? 'bg-amber-50 text-amber-600' : 'bg-forest-50 text-forest-500') + ' flex-shrink-0"><i class="fa-solid ' + t2.icono + ' text-sm"></i></div><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-gray-900 truncate">' + (c ? esc(c.nombre) : '—') + '</div><div class="text-xs text-gray-500">' + esc(t2.nombre) + ' · ' + s.operario + '</div></div><div class="text-right flex-shrink-0"><div class="text-xs text-gray-600">' + (s.estado === 'programado' ? fRel(s.fecha) : fShort(s.fecha)) + '</div><div class="text-xs text-gray-400">' + (s.duracion || '-') + '</div></div></div>'; }); o += '</div>'; return o; }
 
 // CLIENTES
-function rCli() { var f = S.fCli; var cl = S.cli.slice(); if (f.b) { var q = f.b.toLowerCase(); cl = cl.filter(function (c) { return c.nombre.toLowerCase().indexOf(q) !== -1 || c.telefono.toLowerCase().indexOf(q) !== -1 || c.zona.toLowerCase().indexOf(q) !== -1; }); } if (f.t) cl = cl.filter(function (c) { return c.tipo === f.t; }); if (f.z) cl = cl.filter(function (c) { return c.zona === f.z; }); cl.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+function rCli() { var f = S.fCli; var cl = S.cli.slice(); if (f.b) { var q = f.b.toLowerCase(); cl = cl.filter(function (c) { return c.nombre.toLowerCase().indexOf(q) !== -1 || c.telefono.toLowerCase().indexOf(q) !== -1; }); } if (f.t) cl = cl.filter(function (c) { return c.tipo === f.t; }); cl.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
     var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Clientes</h1><p class="text-sm text-gray-500">' + S.cli.length + ' registrados</p></div><button onclick="nav(\'nuevo-cli\')" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Nuevo cliente</button></div>';
-    o += '<div class="card p-4 mb-4"><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1 relative"><i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i><input type="text" class="form-input search-input" placeholder="Buscar..." value="' + esc(f.b) + '" oninput="S.fCli.b=this.value;render()"></div><div class="flex gap-3"><select class="form-input w-auto min-w-[120px]" onchange="S.fCli.t=this.value;render()"><option value="">Tipo</option>'; TCLI.forEach(function (t) { o += '<option value="' + t.v + '"' + (f.t === t.v ? ' selected' : '') + '>' + t.l + '</option>'; }); o += '</select><select class="form-input w-auto min-w-[120px]" onchange="S.fCli.z=this.value;render()"><option value="">Zona</option>'; ZONAS.forEach(function (z) { o += '<option value="' + z + '"' + (f.z === z ? ' selected' : '') + '>' + z + '</option>'; }); o += '</select></div></div></div>';
+    o += '<div class="card p-4 mb-4"><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1 relative"><i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i><input type="text" class="form-input search-input" placeholder="Buscar..." value="' + esc(f.b) + '" oninput="S.fCli.b=this.value;render()"></div><div class="flex gap-3"><select class="form-input w-auto min-w-[120px]" onchange="S.fCli.t=this.value;render()"><option value="">Tipo</option>'; TCLI.forEach(function (t) { o += '<option value="' + t.v + '"' + (f.t === t.v ? ' selected' : '') + '>' + t.l + '</option>'; }); o += '</select></div></div></div>';
     if (!cl.length) o += '<div class="card p-12 text-center text-gray-400">No hay clientes</div>';
-    else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr .5fr"><span>Nombre</span><span>Tipo</span><span>Zona</span><span>Teléfono</span><span>Frecuencia</span><span></span></div>'; cl.forEach(function (c) { var tp = gTC(c.tipo); o += '<div class="trow" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr .5fr" onclick="nav(\'ficha\',{cliId:\'' + c.id + '\'})"><div class="flex items-center gap-3"><div class="avatar w-9 h-9 text-xs" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><span class="font-semibold text-gray-900 text-sm truncate">' + esc(c.nombre) + '</span></div><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span><span class="text-sm text-gray-600">' + c.zona + '</span><span class="text-sm text-gray-600">' + c.telefono + '</span><span class="text-sm text-gray-500">' + gFQ(c.frecuencia).l + '</span><button onclick="event.stopPropagation();delCliente(\'' + c.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; cl.forEach(function (c) { var tp = gTC(c.tipo); o += '<div class="card p-4 cursor-pointer" onclick="nav(\'ficha\',{cliId:\'' + c.id + '\'})"><div class="flex items-start gap-3"><div class="avatar w-11 h-11 text-sm" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><div class="flex-1 min-w-0"><div class="font-bold text-gray-900 text-sm">' + esc(c.nombre) + '</div><div class="flex gap-1.5 mt-1"><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span><span class="badge bg-gray-100 text-gray-600">' + c.zona + '</span></div></div><button onclick="event.stopPropagation();delCliente(\'' + c.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
+    else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:2fr 1fr 1fr 1fr .5fr"><span>Nombre</span><span>Tipo</span><span>Teléfono</span><span>Frecuencia</span><span></span></div>'; cl.forEach(function (c) { var tp = gTC(c.tipo); o += '<div class="trow" style="grid-template-columns:2fr 1fr 1fr 1fr .5fr" onclick="nav(\'ficha\',{cliId:\'' + c.id + '\'})"><div class="flex items-center gap-3"><div class="avatar w-9 h-9 text-xs" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><span class="font-semibold text-gray-900 text-sm truncate">' + esc(c.nombre) + '</span></div><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span><span class="text-sm text-gray-600">' + c.telefono + '</span><span class="text-sm text-gray-500">' + gFQ(c.frecuencia).l + '</span><button onclick="event.stopPropagation();delCliente(\'' + c.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; cl.forEach(function (c) { var tp = gTC(c.tipo); o += '<div class="card p-4 cursor-pointer" onclick="nav(\'ficha\',{cliId:\'' + c.id + '\'})"><div class="flex items-start gap-3"><div class="avatar w-11 h-11 text-sm" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><div class="flex-1 min-w-0"><div class="font-bold text-gray-900 text-sm">' + esc(c.nombre) + '</div><div class="flex gap-1.5 mt-1"><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span></div></div><button onclick="event.stopPropagation();delCliente(\'' + c.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
 
 // FICHA CLIENTE
 function rFicha() { var c = gCI(S.selId); if (!c) return '<div class="p-8 text-center text-gray-500">No encontrado</div>'; var tp = gTC(c.tipo); var fq = gFQ(c.frecuencia); var sv = gSI(c.id); var pr = sv.filter(function (s) { return s.estado === 'programado'; });
     var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'clientes\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button>';
-    o += '<div class="card p-5 lg:p-6 mb-4"><div class="flex flex-col sm:flex-row gap-4"><div class="avatar w-16 h-16 text-xl" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><div class="flex-1 min-w-0"><div class="flex flex-wrap items-center gap-2 mb-1"><h1 class="text-xl lg:text-2xl font-extrabold text-forest-900">' + esc(c.nombre) + '</h1><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span></div><div class="text-sm text-gray-500">' + c.zona + ' · ' + fq.l + ' · Desde ' + fDate(c.fechaAlta) + '</div>' + (c.notas ? '<div class="text-sm text-gray-400 mt-2 italic">' + esc(c.notas) + '</div>' : '') + '</div><div class="flex gap-2 flex-wrap"><button onclick="nav(\'edit-cli\',{editCli:\'' + c.id + '\'})" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen text-xs"></i> Editar</button><button onclick="delCliente(\'' + c.id + '\')" class="btn btn-sm" style="background:#FEE2E2;color:#B91C1C"><i class="fa-solid fa-trash text-xs"></i></button></div></div></div>';
+    o += '<div class="card p-5 lg:p-6 mb-4"><div class="flex flex-col sm:flex-row gap-4"><div class="avatar w-16 h-16 text-xl" style="background:' + gCol(c.nombre) + '">' + gIni(c.nombre) + '</div><div class="flex-1 min-w-0"><div class="flex flex-wrap items-center gap-2 mb-1"><h1 class="text-xl lg:text-2xl font-extrabold text-forest-900">' + esc(c.nombre) + '</h1><span class="badge" style="background:' + tp.b + ';color:' + tp.c + '">' + tp.l + '</span></div><div class="text-sm text-gray-500">' + fq.l + ' · Desde ' + fDate(c.fechaAlta) + '</div>' + (c.notas ? '<div class="text-sm text-gray-400 mt-2 italic">' + esc(c.notas) + '</div>' : '') + '</div><div class="flex gap-2 flex-wrap"><button onclick="nav(\'edit-cli\',{editCli:\'' + c.id + '\'})" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen text-xs"></i> Editar</button><button onclick="delCliente(\'' + c.id + '\')" class="btn btn-sm" style="background:#FEE2E2;color:#B91C1C"><i class="fa-solid fa-trash text-xs"></i></button></div></div></div>';
     o += '<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6"><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Teléfono</div><a href="tel:' + c.telefono + '" class="text-sm font-semibold text-forest-700">' + c.telefono + '</a></div><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Email</div><div class="text-sm text-gray-700 truncate">' + (c.email || '-') + '</div></div><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Dirección</div><div class="text-sm text-gray-700">' + (c.direccion || '-') + '</div></div><div class="card p-4"><div class="text-xs font-semibold text-gray-400 uppercase mb-1">Próxima visita</div><div class="text-sm font-semibold ' + (pr.length ? 'text-amber-600' : 'text-gray-400') + '">' + (pr.length ? fRel(pr[0].fecha) : 'Sin programar') + '</div></div></div>';
     o += '<div class="flex items-center justify-between mb-3"><h2 class="font-bold text-forest-900 text-lg">Historial</h2><button onclick="nav(\'nuevo-svc\',{preCli:\'' + c.id + '\'})" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus text-xs"></i> Añadir</button></div>';
     if (!sv.length) o += '<div class="card p-8 text-center text-gray-400">Sin servicios</div>';
     else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:1fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span>Fecha</span><span>Servicio</span><span>Operario</span><span>Duración</span><span>Estado</span><span>Obs.</span><span></span></div>'; sv.forEach(function (s) { var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="trow" style="grid-template-columns:1fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span class="text-sm font-medium text-gray-900">' + fDate(s.fecha) + '</span><div class="flex items-center gap-2"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm text-gray-700">' + esc(t.nombre) + '</span></div><span class="text-sm text-gray-600">' + s.operario + '</span><span class="text-sm text-gray-500">' + (s.duracion || '-') + '</span><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><span class="text-sm text-gray-500 truncate">' + (esc(s.observaciones) || '-') + '</span><button onclick="event.stopPropagation();delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; sv.forEach(function (s) { var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm font-semibold">' + esc(t.nombre) + '</span></div><div class="flex items-center gap-2"><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><button onclick="delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div></div><div class="flex gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-calendar mr-1"></i>' + fDate(s.fecha) + '</span><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
 
 // FORM CLIENTE
-function rFC(edit) { var c = { nombre: '', tipo: 'particular', zona: '', telefono: '', email: '', direccion: '', frecuencia: 'mensual', fechaAlta: new Date().toISOString().split('T')[0], notas: '' }; if (edit && S.editCliId) c = gCI(S.editCliId) || c; var bk = edit ? 'ficha' : 'clientes';
+function rFC(edit) { var c = { nombre: '', tipo: 'particular', telefono: '', email: '', direccion: '', frecuencia: 'mensual', fechaAlta: new Date().toISOString().split('T')[0], notas: '' }; if (edit && S.editCliId) c = gCI(S.editCliId) || c; var bk = edit ? 'ficha' : 'clientes';
     var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'' + bk + '\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar cliente' : 'Nuevo cliente') + '</h1><form onsubmit="saveCli(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
     o += fi('Nombre *', 'text', 'nombre', c.nombre, 'Nombre completo', 1); o += fi('Teléfono *', 'tel', 'telefono', c.telefono, '671 000 000', 1); o += fi('Email', 'email', 'email', c.email, 'correo@ejemplo.com', 0);
     o += '<div><label class="form-label">Tipo *</label><select name="tipo" class="form-input">'; TCLI.forEach(function (t) { o += '<option value="' + t.v + '"' + (c.tipo === t.v ? ' selected' : '') + '>' + t.l + '</option>'; }); o += '</select></div>';
-    o += '<div><label class="form-label">Zona *</label><select name="zona" class="form-input"><option value="">Zona</option>'; ZONAS.forEach(function (z) { o += '<option value="' + z + '"' + (c.zona === z ? ' selected' : '') + '>' + z + '</option>'; }); o += '</select></div>';
     o += '<div class="sm:col-span-2">' + fi2('Dirección', 'direccion', c.direccion, 'C/ Ejemplo 123') + '</div>';
     o += '<div><label class="form-label">Frecuencia</label><select name="frecuencia" class="form-input">'; FREQ.forEach(function (fr) { o += '<option value="' + fr.v + '"' + (c.frecuencia === fr.v ? ' selected' : '') + '>' + fr.l + '</option>'; }); o += '</select></div>';
     o += '<div><label class="form-label">Fecha de alta</label><input type="date" name="fechaAlta" class="form-input" value="' + (c.fechaAlta || '') + '"></div>';
@@ -442,7 +430,6 @@ async function saveCli(ev, edit) {
     var d = {
         nombre: f.nombre.value.trim(),
         tipo: f.tipo.value,
-        zona: f.zona.value,
         telefono: f.telefono.value.trim(),
         email: f.email.value.trim(),
         direccion: f.direccion.value.trim(),
@@ -450,7 +437,7 @@ async function saveCli(ev, edit) {
         fechaAlta: f.fechaAlta.value || new Date().toISOString().split('T')[0],
         notas: f.notas.value.trim()
     };
-    if (!d.nombre || !d.zona || !d.telefono) {
+    if (!d.nombre || !d.telefono) {
         toast('Rellena los campos obligatorios', 'err');
         return;
     }
@@ -482,107 +469,104 @@ function rSvc() { var f = S.fSvc; var sv = S.svc.slice(); if (f.b) { var q = f.b
     else { o += '<div class="card hidden lg:block overflow-hidden"><div class="thead" style="grid-template-columns:1fr 1.5fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span>Fecha</span><span>Cliente</span><span>Servicio</span><span>Operario</span><span>Duración</span><span>Estado</span><span>Obs.</span><span></span></div>'; sv.forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="trow" style="grid-template-columns:1fr 1.5fr 1.5fr 1fr .7fr .8fr 1fr .5fr"><span class="text-sm font-medium text-gray-900">' + fDate(s.fecha) + '</span><span class="text-sm font-semibold text-forest-700 cursor-pointer hover:underline truncate" onclick="event.stopPropagation();nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})">' + (c ? esc(c.nombre) : '—') + '</span><div class="flex items-center gap-2"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm text-gray-700 truncate">' + esc(t.nombre) + '</span></div><span class="text-sm text-gray-600">' + s.operario + '</span><span class="text-sm text-gray-500">' + (s.duracion || '-') + '</span><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><span class="text-sm text-gray-500 truncate">' + (esc(s.observaciones) || '-') + '</span><button onclick="event.stopPropagation();delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div>'; }); o += '</div>'; o += '<div class="flex flex-col gap-3 lg:hidden">'; sv.forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="card p-4"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold text-forest-700">' + (c ? esc(c.nombre) : '—') + '</span><div class="flex items-center gap-2"><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span><button onclick="delServicio(\'' + s.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div></div><div class="flex items-center gap-2 mb-1"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm">' + esc(t.nombre) + '</span></div><div class="flex gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-calendar mr-1"></i>' + fDate(s.fecha) + '</span><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span><span><i class="fa-solid fa-clock mr-1"></i>' + (s.duracion || '-') + '</span></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
 
 // FORM SERVICIO
-function rFS(edit) { var s = { fecha: new Date().toISOString().split('T')[0], clienteId: '', tipoServicio: S.tipos.length ? S.tipos[0].id : '', operario: OPER[0], duracion: '45min', observaciones: '', estado: 'programado' }; if (edit && S.editSvcId) s = S.svc.find(function (x) { return x.id === S.editSvcId; }) || s; if (S.preCliId && !edit) s.clienteId = S.preCliId; var cl = S.cli.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); }); var bk = edit ? 'servicios' : (S.preCliId ? 'ficha' : 'servicios');
-    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'' + bk + '\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar servicio' : 'Nuevo servicio') + '</h1><form onsubmit="saveSvc(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
-    o += '<div><label class="form-label">Cliente *</label><select name="clienteId" class="form-input" required><option value="">Cliente</option>'; cl.forEach(function (c) { o += '<option value="' + c.id + '"' + (s.clienteId === c.id ? ' selected' : '') + '>' + esc(c.nombre) + ' (' + c.zona + ')</option>'; }); o += '</select></div>';
+function rFS(edit) { var s = { fecha: new Date().toISOString().split('T')[0], clienteId: '', tipoServicio: S.tipos.length ? S.tipos[0].id : '', operario: OPER[0], duracion: '45min', observaciones: '', estado: 'programado' }; if (edit && S.editSvcId) s = S.svc.find(function (x) { return x.id === S.editSvcId; }) || s; 
+    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'servicios\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar servicio' : 'Nuevo servicio') + '</h1><form onsubmit="saveSvc(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
     o += '<div><label class="form-label">Fecha *</label><input type="date" name="fecha" class="form-input" value="' + (s.fecha || '') + '" required></div>';
-    o += '<div><label class="form-label">Tipo de servicio *</label><select name="tipoServicio" class="form-input" required onchange="autoDur(this.value)">'; S.tipos.forEach(function (t) { o += '<option value="' + t.id + '"' + (s.tipoServicio === t.id ? ' selected' : '') + '>' + esc(t.nombre) + '</option>'; }); o += '</select></div>';
-    o += '<div><label class="form-label">Operario *</label><select name="operario" class="form-input" required>'; OPER.forEach(function (op) { o += '<option value="' + op + '"' + (s.operario === op ? ' selected' : '') + '>' + op + '</option>'; }); o += '</select></div>';
-    o += '<div><label class="form-label">Duración</label><select name="duracion" class="form-input" id="dur-sel">'; ['30min', '45min', '60min', '90min', '120min', '150min', '180min', '240min'].forEach(function (d) { o += '<option value="' + d + '"' + (s.duracion === d ? ' selected' : '') + '>' + d + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Cliente *</label><select name="clienteId" class="form-input" required><option value="">Seleccionar</option>'; S.cli.sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es')}).forEach(function (c) { o += '<option value="' + c.id + '"' + (s.clienteId === c.id ? ' selected' : '') + '>' + esc(c.nombre) + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Tipo de servicio *</label><select name="tipoServicio" class="form-input" required>'; S.tipos.forEach(function (t) { o += '<option value="' + t.id + '"' + (s.tipoServicio === t.id ? ' selected' : '') + '>' + esc(t.nombre) + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Operario</label><select name="operario" class="form-input">'; OPER.forEach(function (op) { o += '<option value="' + op + '"' + (s.operario === op ? ' selected' : '') + '>' + op + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Duración</label><select name="duracion" class="form-input">'; ['30min','45min','60min','90min','120min'].forEach(function (d) { o += '<option value="' + d + '"' + (s.duracion === d ? ' selected' : '') + '>' + d + '</option>'; }); o += '</select></div>';
     o += '<div><label class="form-label">Estado</label><select name="estado" class="form-input">'; EST.forEach(function (e) { o += '<option value="' + e.v + '"' + (s.estado === e.v ? ' selected' : '') + '>' + e.l + '</option>'; }); o += '</select></div>';
     o += '<div class="sm:col-span-2"><label class="form-label">Observaciones</label><textarea name="observaciones" class="form-input" rows="3">' + esc(s.observaciones) + '</textarea></div>';
-    o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Registrar') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'' + bk + '\')">Cancelar</button>'; if (edit) o += '<button type="button" class="btn btn-danger btn-sm ml-auto" onclick="delServicio(\'' + s.id + '\')"><i class="fa-solid fa-trash text-xs"></i> Eliminar</button>'; o += '</div></form></div>'; return o; }
-function autoDur(tid) { var t = S.tipos.find(function (x) { return x.id === tid; }); if (t) { var s = document.getElementById('dur-sel'); if (s) s.value = t.duracion; } }
-async function saveSvc(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { fecha: f.fecha.value, clienteId: f.clienteId.value, tipoServicio: f.tipoServicio.value, operario: f.operario.value, duracion: f.duracion.value, observaciones: f.observaciones.value.trim(), estado: f.estado.value }; if (!d.clienteId || !d.fecha) { toast('Faltan datos', 'err'); return; } if (edit && S.editSvcId) { var i = S.svc.findIndex(function (s) { return s.id === S.editSvcId; }); if (i !== -1) S.svc[i] = Object.assign({}, S.svc[i], d); await dbSaveServicio(S.svc[i]); save(); toast('Servicio actualizado'); S.editSvcId = null; nav('servicios'); } else { var nuevoSvc = await dbSaveServicio(d); S.svc.push(nuevoSvc); save(); toast('Servicio registrado'); S.preCliId = null; nav('servicios'); } }
+    o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Crear') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'servicios\')">Cancelar</button></div></form></div>'; return o; }
+
+async function saveSvc(ev, edit) {
+    ev.preventDefault(); var f = ev.target;
+    var d = { fecha: f.fecha.value, clienteId: f.clienteId.value, tipoServicio: f.tipoServicio.value, operario: f.operario.value, duracion: f.duracion.value, observaciones: f.observaciones.value.trim(), estado: f.estado.value };
+    if (!d.fecha || !d.clienteId || !d.tipoServicio) { toast('Rellena los campos obligatorios', 'err'); return; }
+    if (edit && S.editSvcId) {
+        var i = S.svc.findIndex(function (s) { return s.id === S.editSvcId; });
+        if (i !== -1) S.svc[i] = Object.assign({}, S.svc[i], d);
+        await dbSaveServicio(S.svc[i]);
+        save(); toast('Servicio actualizado'); S.editSvcId = null; nav('servicios');
+    } else {
+        var nuevoSvc = await dbSaveServicio(d);
+        S.svc.push(nuevoSvc);
+        save(); toast('Servicio creado'); S.editSvcId = null; nav('servicios');
+    }
+}
 
 // TIPOS DE SERVICIO
 function rTipos() {
-    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Tipos de servicio</h1><p class="text-sm text-gray-500">' + S.tipos.length + ' tipos definidos</p></div><button onclick="nav(\'nuevo-tipo\')" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Nuevo tipo</button></div>';
-    if (!S.tipos.length) o += '<div class="card p-12 text-center text-gray-400">No hay tipos</div>';
-    else { o += '<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">'; S.tipos.forEach(function (t) { var u = S.svc.filter(function (s) { return s.tipoServicio === t.id; }).length; o += '<div class="card p-5"><div class="flex items-start gap-4"><div class="w-12 h-12 rounded-xl flex items-center justify-center bg-forest-50 text-forest-600 flex-shrink-0"><i class="fa-solid ' + t.icono + ' text-lg"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-gray-900 text-sm mb-1">' + esc(t.nombre) + '</div><div class="flex items-center gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-clock mr-1"></i>' + esc(t.duracion) + '</span><span><i class="fa-solid fa-clipboard-list mr-1"></i>' + u + ' servicio' + (u !== 1 ? 's' : '') + '</span></div></div><div class="flex gap-1.5 flex-shrink-0"><button onclick="nav(\'edit-tipo\',{editTipo:\'' + t.id + '\'})" class="bact" title="Editar"><i class="fa-solid fa-pen"></i></button><button onclick="delTipo(\'' + t.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div></div>'; }); o += '</div>'; } o += '</div>'; return o; }
+    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Tipos de servicio</h1><p class="text-sm text-gray-500">' + S.tipos.length + ' registrados</p></div><button onclick="nav(\'nuevo-tipo\')" class="btn btn-primary"><i class="fa-solid fa-circle-plus"></i> Nuevo tipo</button></div>';
+    if (!S.tipos.length) o += '<div class="card p-12 text-center text-gray-400">No hay tipos de servicio</div>';
+    else { o += '<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">'; S.tipos.forEach(function (t) { var u = S.svc.filter(function (s) { return s.tipoServicio === t.id; }).length; o += '<div class="card p-5"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-forest-50 text-forest-500 flex items-center justify-center"><i class="fa-solid ' + t.icono + '"></i></div><div><div class="font-bold text-gray-900">' + esc(t.nombre) + '</div><div class="text-xs text-gray-500">' + t.duracion + ' · ' + u + ' servicio' + (u !== 1 ? 's' : '') + '</div></div></div><div class="flex gap-1"><button onclick="nav(\'edit-tipo\',{editTipo:\'' + t.id + '\'})" class="bact"><i class="fa-solid fa-pen"></i></button><button onclick="delTipo(\'' + t.id + '\')" class="bdel"><i class="fa-solid fa-trash"></i></button></div></div></div>'; }); o += '</div>'; } o += '</div>'; return o;
+}
 
-function rFT(edit) { var t = { nombre: '', icono: 'fa-tree', duracion: '60min' }; if (edit && S.editTipoId) t = S.tipos.find(function (x) { return x.id === S.editTipoId; }) || t;
+function rFT(edit) { var t = { nombre: '', icono: ICONS[0], duracion: '60min' }; if (edit && S.editTipoId) t = S.tipos.find(function (x) { return x.id === S.editTipoId; }) || t;
     var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'tipos\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-6">' + (edit ? 'Editar tipo' : 'Nuevo tipo') + '</h1><form onsubmit="saveTipo(event,' + edit + ')" class="card p-5 lg:p-6 max-w-3xl"><div class="grid sm:grid-cols-2 gap-4">';
-    o += fi('Nombre del servicio *', 'text', 'nombre', t.nombre, 'Ej: Mantenimiento de piscina', 1);
-    o += '<div><label class="form-label">Duración por defecto</label><select name="duracion" class="form-input">'; ['30min', '45min', '60min', '90min', '120min', '150min', '180min', '240min'].forEach(function (d) { o += '<option value="' + d + '"' + (t.duracion === d ? ' selected' : '') + '>' + d + '</option>'; }); o += '</select></div>';
-    o += '<div class="sm:col-span-2"><label class="form-label">Icono</label><div class="flex flex-wrap gap-2">';
-    ICONS.forEach(function (ic) { var sel = t.icono === ic; o += '<button type="button" onclick="document.querySelectorAll(\'.ico-btn\').forEach(function(b){b.classList.remove(\'ring-2\',\'ring-forest-500\')});this.classList.add(\'ring-2\',\'ring-forest-500\');document.getElementById(\'sel-icon\').value=\'' + ic + '\'" class="ico-btn w-10 h-10 rounded-lg border flex items-center justify-center cursor-pointer hover:bg-forest-50 transition ' + (sel ? 'ring-2 ring-forest-500 bg-forest-50' : 'bg-white border-[#E7E0D8]') + '"><i class="fa-solid ' + ic + ' text-forest-600"></i></button>'; });
-    o += '<input type="hidden" name="icono" id="sel-icon" value="' + t.icono + '"></div></div>';
+    o += fi('Nombre *', 'text', 'nombre', t.nombre, 'Nombre del servicio', 1);
+    o += '<div><label class="form-label">Icono</label><select name="icono" class="form-input">'; ICONS.forEach(function (ic) { o += '<option value="' + ic + '"' + (t.icono === ic ? ' selected' : '') + '>' + ic + '</option>'; }); o += '</select></div>';
+    o += '<div><label class="form-label">Duración</label><select name="duracion" class="form-input">'; ['30min','45min','60min','90min','120min'].forEach(function (d) { o += '<option value="' + d + '"' + (t.duracion === d ? ' selected' : '') + '>' + d + '</option>'; }); o += '</select></div>';
     o += '</div><div class="flex gap-3 mt-6 pt-4 border-t border-[#F0EBE2]"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ' + (edit ? 'Guardar' : 'Crear') + '</button><button type="button" class="btn btn-secondary" onclick="nav(\'tipos\')">Cancelar</button></div></form></div>'; return o; }
-async function saveTipo(ev, edit) { ev.preventDefault(); var f = ev.target; var d = { nombre: f.nombre.value.trim(), icono: f.icono.value, duracion: f.duracion.value }; if (!d.nombre) { toast('Pon un nombre', 'err'); return; } if (edit && S.editTipoId) { var i = S.tipos.findIndex(function (t) { return t.id === S.editTipoId; }); if (i !== -1) S.tipos[i] = Object.assign({}, S.tipos[i], d); await dbSaveTipo(S.tipos[i]); save(); toast('Tipo actualizado'); S.editTipoId = null; nav('tipos'); } else { var nuevoTipo = await dbSaveTipo(d); S.tipos.push(nuevoTipo); save(); toast('Tipo creado'); nav('tipos'); } }
+
+async function saveTipo(ev, edit) {
+    ev.preventDefault(); var f = ev.target;
+    var d = { nombre: f.nombre.value.trim(), icono: f.icono.value, duracion: f.duracion.value };
+    if (!d.nombre) { toast('Introduce un nombre', 'err'); return; }
+    if (edit && S.editTipoId) {
+        var i = S.tipos.findIndex(function (t) { return t.id === S.editTipoId; });
+        if (i !== -1) S.tipos[i] = Object.assign({}, S.tipos[i], d);
+        await dbSaveTipo(S.tipos[i]);
+        save(); toast('Tipo actualizado'); S.editTipoId = null; nav('tipos');
+    } else {
+        var nuevoTipo = await dbSaveTipo(d);
+        S.tipos.push(nuevoTipo);
+        save(); toast('Tipo creado'); S.editTipoId = null; nav('tipos');
+    }
+}
 
 // PRÓXIMAS VISITAS
-function rProx() { var h = new Date(); h.setHours(0, 0, 0, 0); var hs = h.toISOString().split('T')[0]; var px = S.svc.filter(function (s) { return s.estado === 'programado' && s.fecha >= hs; }).sort(function (a, b) { return a.fecha.localeCompare(b.fecha); });
-    var g = {}; var ord = ['Hoy', 'Mañana', 'Esta semana', 'Próxima semana', 'Más adelante']; var gI = { 'Hoy': 'fa-calendar-day', 'Mañana': 'fa-forward', 'Esta semana': 'fa-calendar-week', 'Próxima semana': 'fa-calendar', 'Más adelante': 'fa-ellipsis' }; var gC = { 'Hoy': '#b45309', 'Mañana': '#c67b3c', 'Esta semana': '#3a6b35', 'Próxima semana': '#6b5b3a', 'Más adelante': '#9ca3af' };
-    px.forEach(function (s) { var f = new Date(s.fecha + 'T00:00:00'); var df = Math.round((f - h) / 864e5); var k; if (df === 0) k = 'Hoy'; else if (df === 1) k = 'Mañana'; else if (df <= 7) k = 'Esta semana'; else if (df <= 14) k = 'Próxima semana'; else k = 'Más adelante'; if (!g[k]) g[k] = []; g[k].push(s); });
-    var o = '<div class="p-5 lg:p-8"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Próximas visitas</h1><p class="text-sm text-gray-500">' + px.length + ' programadas</p></div><div class="flex gap-3"><button onclick="nav(\'reservar\')" class="btn calcom-btn btn-sm"><i class="fa-solid fa-calendar-plus"></i> Cal.com</button><button onclick="nav(\'nuevo-svc\')" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-plus"></i> Registrar</button></div></div>';
-    if (!px.length) o += '<div class="card p-12 text-center text-gray-400">Sin visitas programadas</div>';
-    else ord.forEach(function (k) { if (!g[k]) return; o += '<div class="mb-6"><div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:' + gC[k] + '20"><i class="fa-solid ' + gI[k] + ' text-xs" style="color:' + gC[k] + '"></i></div><h2 class="font-bold text-forest-900">' + k + '</h2><span class="text-xs text-gray-400">(' + g[k].length + ')</span></div><div class="flex flex-col gap-2">'; g[k].forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); o += '<div class="card p-4"><div class="flex items-start gap-3"><div class="avatar w-10 h-10 text-xs mt-0.5" style="background:' + (c ? gCol(c.nombre) : '#9ca3af') + '">' + (c ? gIni(c.nombre) : '?') + '</div><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1"><span class="font-bold text-sm text-gray-900 cursor-pointer hover:text-forest-600" onclick="nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})">' + (c ? esc(c.nombre) : '—') + '</span><span class="text-xs text-gray-400">' + fShort(s.fecha) + '</span></div><div class="flex items-center gap-2 text-sm text-gray-600"><i class="fa-solid ' + t.icono + ' text-xs text-gray-400"></i>' + esc(t.nombre) + '</div><div class="flex gap-3 text-xs text-gray-500 mt-1"><span><i class="fa-solid fa-user mr-1"></i>' + s.operario + '</span><span><i class="fa-solid fa-clock mr-1"></i>' + (s.duracion || '-') + '</span></div></div><div class="flex gap-1.5 flex-shrink-0"><button onclick="compSvc(\'' + s.id + '\')" class="bact" title="Completar"><i class="fa-solid fa-check"></i></button><button onclick="delServicio(\'' + s.id + '\')" class="bdel" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></div></div>'; }); o += '</div></div>'; })
-    o += '</div>'; return o; }
-function compSvc(id) { var i = S.svc.findIndex(function (s) { return s.id === id; }); if (i !== -1) { S.svc[i].estado = 'completado'; save(); dbSaveServicio(S.svc[i]); toast('Completado'); render(); } }
+function rProx() {
+    var h = new Date(); h.setHours(0, 0, 0, 0);
+    var px = S.svc.filter(function (s) { return s.estado === 'programado' && new Date(s.fecha + 'T00:00:00') >= h; }).sort(function (a, b) { return a.fecha.localeCompare(b.fecha); });
+    var o = '<div class="p-5 lg:p-8"><div class="mb-6"><h1 class="text-2xl font-extrabold text-forest-900">Próximas visitas</h1><p class="text-sm text-gray-500">' + px.length + ' programadas</p></div>';
+    if (!px.length) o += '<div class="card p-12 text-center text-gray-400">No hay visitas programadas</div>';
+    else { o += '<div class="flex flex-col gap-3">'; px.forEach(function (s) { var c = gCI(s.clienteId); var t = gTS(s.tipoServicio); var e = gTE(s.estado); o += '<div class="card p-4 cursor-pointer hover:border-forest-500/30 transition-colors" onclick="nav(\'ficha\',{cliId:\'' + s.clienteId + '\'})"><div class="flex items-center justify-between mb-2"><span class="text-sm font-bold text-forest-900">' + fRel(s.fecha) + ' <span class="font-normal text-gray-500">(' + fDate(s.fecha) + ')</span></span><span class="badge" style="background:' + e.b + ';color:' + e.c + '">' + e.l + '</span></div><div class="flex items-center gap-2 mb-1"><i class="fa-solid ' + t.icono + ' text-gray-400 text-xs"></i><span class="text-sm">' + esc(t.nombre) + '</span></div><div class="flex gap-3 text-xs text-gray-500"><span><i class="fa-solid fa-user mr-1"></i>' + (c ? esc(c.nombre) : '—') + '</span><span><i class="fa-solid fa-wrench mr-1"></i>' + s.operario + '</span><span><i class="fa-solid fa-clock mr-1"></i>' + (s.duracion || '-') + '</span></div></div>'; }); o += '</div>'; } o += '</div>'; return o;
+}
 
-// ============================================================
-// INTEGRACIÓN CAL.COM - VISTA Y FUNCIÓN
-// ============================================================
+// RESERVAR CITA (CAL.COM)
 function rReservar() {
-    var o = '<div class="p-5 lg:p-8">';
-    o += '<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-extrabold text-forest-900">Reservar Cita</h1><p class="text-sm text-gray-500 mt-1">Las reservas hechas aquí se registran automáticamente en el CRM</p></div>';
-    o += '<button onclick="window.open(\'https://cal.com/joan-pons\',\'_blank\')" class="btn btn-secondary btn-sm"><i class="fa-solid fa-external-link-alt"></i> Abrir externo</button></div>';
-    o += '<div class="card p-4 overflow-hidden" style="min-height: 800px; background: #fff;">';
-    // Contenedor donde Cal.com inyectará el iframe
-    o += '<div id="cal-embed-container" style="width:100%;height:100%;min-height:780px;"></div>';
-    o += '</div></div>';
+    var o = '<div class="p-5 lg:p-8"><button onclick="nav(\'dashboard\')" class="text-sm text-gray-500 hover:text-forest-600 font-medium mb-4 cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Volver</button><h1 class="text-2xl font-extrabold text-forest-900 mb-2">Reservar cita</h1><p class="text-sm text-gray-500 mb-6">Selecciona un horario disponible y se sincronizará automáticamente con el CRM.</p>';
+    o += '<div class="card overflow-hidden" style="min-height:500px"><div id="calcom-embed" style="width:100%;height:600px"></div></div></div>';
     
-    // Es NECESARIO usar setTimeout para darle tiempo al DOM a insertar el div antes de llamar a Cal()
     setTimeout(function() {
-        var container = document.getElementById("cal-embed-container");
-        if (container && typeof Cal !== 'undefined') {
-            container.innerHTML = ''; // Limpiar por si acaso
-            try {
-                Cal("inline", {
-                    elementOrSelector: "#cal-embed-container",
-                    calLink: "joan-pons"
-                });
-                // Configuración de estilos de Cal.com
-                Cal("ui", {
-                    "theme": "light",
-                    "styles": {
-                        "branding": {
-                            "brandColor": "#3a6b35" // Color de tu CRM
-                        }
-                    }
-                });
-            } catch(e) {
-                console.error("Error incrustando Cal.com:", e);
-                container.innerHTML = '<div class="p-8 text-center text-gray-500">Error al cargar el calendario. Intenta usar el botón de abrir externo.</div>';
+        try { 
+            if (typeof Cal !== 'undefined') {
+                Cal("inline", { elementOrSelector: "#calcom-embed", calLink: "toni" }); 
             }
-        }
-    }, 300); // 300ms de espera
+        } catch(e) { console.error("Cal.com embed error", e); }
+    }, 100);
     
     return o;
 }
 
 // ============================================================
-// MANEJO DE RESERVAS DESDE CAL.COM
-// ============================================================
-
-// ============================================================
 // INICIALIZACIÓN
 // ============================================================
-async function init() { 
-    var d = await dbLoadAll();
-    S.cli = d.cli; S.svc = d.svc; S.tipos = d.tipos;
-
-    S.view = 'dashboard'; 
-    updNav(); 
-    render(); 
-
-    // Escuchador del evento de Cal.com (window es más fiable que document para CustomEvents)
-    window.addEventListener("cal:bookingSuccessful", handleCalBooking);
-
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); if (S.sbOpen) toggleSB(); } }); 
+async function init() {
+    var data = await dbLoadAll();
+    if (data.cli.length === 0 && data.tipos.length === 0 && data.svc.length === 0) {
+        sample();
+    } else {
+        S.cli = data.cli;
+        S.tipos = data.tipos;
+        S.svc = data.svc;
+    }
+    render();
 }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+init();
 </script>
 </body>
 </html>
